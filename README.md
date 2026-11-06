@@ -1,31 +1,62 @@
-# AETHRA
+# AETHRA Launcher
 
 **Beyond the interface.**
 
-AETHRA is an independent Android launcher project for phones and tablets. Its design language, **AETHRA FORM**, pairs calm structure with expressive geometry, tactile surfaces, and purposeful colour.
+AETHRA is an independent Android launcher for phones and tablets. Its visual language, **AETHRA FORM**, uses a dark architectural canvas, warm paper surfaces, signal orange, and electric lime.
 
-## Product principles
+## First version — 0.1.0
 
-- **Adaptive by nature** — designed for compact phones and expansive tablets.
-- **Direct, not decorative** — the home screen should make everyday actions feel clear and immediate.
-- **Local-first** — launcher preferences stay on the device; no analytics or account system is part of the first version.
-- **Honest capability** — features are shipped only when they work.
+The first development build includes:
 
-## Development
+- Android Home-app integration, so AETHRA can be selected as the default Home app.
+- Installed-app discovery using Android's launchable-activity query.
+- App launching from the home space and app field.
+- Live local clock and date.
+- Search by app label or package name.
+- Saved shortcuts: long-press an app to add or remove it from the home space.
+- Adaptive layouts for compact phones and wide tablet screens.
+- Safe-area handling for status bars, navigation bars, and display cutouts.
+- Local preferences only. No account, analytics SDK, or network permission is included.
 
-The stable branch is `main`. Active work happens on `aethra-dev`.
+## Not included yet
 
-The Android app is built with Kotlin and Jetpack Compose. A GitHub Actions workflow will build a debug APK for testing.
+Widgets, folders, icon packs, wallpaper selection, gesture customisation, notification badges, and backup/restore are not claimed as working features. They are candidates for later milestones after the core launcher is tested on real devices.
 
-## Project status
+## Build
 
-Early development. The first milestone focuses on Home-screen integration, app discovery and launching, app search, favourites, and responsive phone/tablet layouts.
+The project uses Kotlin, Jetpack Compose, Android Gradle Plugin 9.5, and Gradle 9.8.2.
+
+GitHub Actions builds a debug APK on pushes to `aethra-dev` and `main`. Open the repository's **Actions** tab, select **AETHRA Android Build**, open the latest successful run, and download the `aethra-debug-apk` artifact.
+
+The workflow intentionally uses a cloud Gradle installation, so a Gradle wrapper binary is not required in the repository.
+
+## Install and select AETHRA
+
+1. Download and extract the APK artifact.
+2. Install the APK on the Android device.
+3. Press the device's Home button or use the Home gesture.
+4. Select **AETHRA** in Android's Home-app chooser and choose it as the default.
+5. Open the app field to search and launch installed apps.
+
+The first build is a **debug/testing APK**, not a Play Store release. It is not signed with a permanent release key.
+
+## Development branches
+
+- `main` — stable project landing point.
+- `aethra-dev` — active implementation and testing.
+
+Keep day-to-day changes on `aethra-dev`. Promote a tested milestone to `main) only after it works on the target phone and tablet.
+
+## Package
+
+`com.aethra.launcher`
+
+This application ID is the project's initial package identity. Keep it unchanged after distributing builds unless you intentionally want Android to treat the app as a different application.
 
 ## Brand
 
-- Name: AETHRA
 - Product: AETHRA Launcher
-- Design system: AETHRA FORM
+- Design language: AETHRA FORM
 - Tagline: Beyond the interface.
 
-The name and visual identity are working project assets and should be cleared before public commercial release.
+The brand name and logo are working project assets; trademark, domain, and store-name clearance remain separate checks before a public commercial launch.
