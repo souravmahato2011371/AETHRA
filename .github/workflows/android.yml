@@ -30,8 +30,12 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
 
-      - name: Install Android 37 platform
-        run: sdkmanager "platforms;android-37" "build-tools;36.0.0"
+      - name: Install Android 17 SDK platform
+        run: |
+          sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
+          if [ -d "$ANDROID_SDK_ROOT/platforms/android-37.0" ] && [ ! -e "$ANDROID_SDK_ROOT/platforms/android-37" ]; then
+            ln -s android-37.0 "$ANDROID_SDK_ROOT/platforms/android-37"
+          fi
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
