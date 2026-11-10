@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - aethra-dev
+      - aethra-v1-upgrade
   pull_request:
     branches:
       - main
