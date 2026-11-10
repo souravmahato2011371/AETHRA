@@ -8,8 +8,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.DeviceFontFamilyName
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.Font as LocalFont
+import androidx.compose.ui.text.googlefonts.Font as GoogleFontResource
+import androidx.compose.ui.text.googlefonts.GoogleFont
 
 // Kept for the legacy launcher preview that remains in the source tree.
 object AethraPalette {
@@ -57,6 +61,39 @@ val LocalAethraColors = staticCompositionLocalOf {
     )
 }
 
+private val liquidFontFamily = FontFamily(
+    GoogleFontResource(googleFont = GoogleFont("Manrope"), weight = FontWeight.Normal),
+    GoogleFontResource(googleFont = GoogleFont("Manrope"), weight = FontWeight.Medium),
+    GoogleFontResource(googleFont = GoogleFont("Manrope"), weight = FontWeight.Bold),
+    LocalFont(DeviceFontFamilyName("sans-serif"))
+)
+
+private val neoDisplayFontFamily = FontFamily(
+    GoogleFontResource(googleFont = GoogleFont("Space Grotesk"), weight = FontWeight.Normal),
+    GoogleFontResource(googleFont = GoogleFont("Space Grotesk"), weight = FontWeight.Medium),
+    GoogleFontResource(googleFont = GoogleFont("Space Grotesk"), weight = FontWeight.Bold),
+    LocalFont(DeviceFontFamilyName("sans-serif"))
+)
+
+private val neoLabelFontFamily = FontFamily(
+    GoogleFontResource(googleFont = GoogleFont("Space Mono"), weight = FontWeight.Normal),
+    GoogleFontResource(googleFont = GoogleFont("Space Mono"), weight = FontWeight.Bold),
+    LocalFont(DeviceFontFamilyName("monospace"))
+)
+
+private val premiumBodyFontFamily = FontFamily(
+    GoogleFontResource(googleFont = GoogleFont("DM Sans"), weight = FontWeight.Normal),
+    GoogleFontResource(googleFont = GoogleFont("DM Sans"), weight = FontWeight.Medium),
+    GoogleFontResource(googleFont = GoogleFont("DM Sans"), weight = FontWeight.Bold),
+    LocalFont(DeviceFontFamilyName("sans-serif"))
+)
+
+private val premiumDisplayFontFamily = FontFamily(
+    GoogleFontResource(googleFont = GoogleFont("Cormorant Garamond"), weight = FontWeight.Medium),
+    GoogleFontResource(googleFont = GoogleFont("Cormorant Garamond"), weight = FontWeight.SemiBold),
+    LocalFont(DeviceFontFamilyName("serif"))
+)
+
 @Composable
 fun AethraTheme(
     style: VisualStyle = VisualStyle.NEO_CONSTRUCTIVIST_POP,
@@ -83,13 +120,18 @@ fun AethraTheme(
         }
     }
 
-    // The three art directions use deliberately different typographic voices.
-    // Native system families guarantee a legible fallback when offline.
     val displayFamily = when (style) {
-        VisualStyle.LIQUID_GLASS -> FontFamily.SansSerif
-        VisualStyle.NEO_CONSTRUCTIVIST_POP -> FontFamily.SansSerif
-        VisualStyle.SIGNATURE_PREMIUM -> FontFamily.Serif
+        VisualStyle.LIQUID_GLASS -> liquidFontFamily
+        VisualStyle.NEO_CONSTRUCTIVIST_POP -> neoDisplayFontFamily
+        VisualStyle.SIGNATURE_PREMIUM -> premiumDisplayFontFamily
     }
+    val bodyFamily = when (style) {
+        VisualStyle.LIQUID_GLASS -> liquidFontFamily
+        VisualStyle.NEO_CONSTRUCTIVIST_POP -> neoDisplayFontFamily
+        VisualStyle.SIGNATURE_PREMIUM -> premiumBodyFontFamily
+    }
+    val labelFamily = if (style == VisualStyle.NEO_CONSTRUCTIVIST_POP) neoLabelFontFamily else bodyFamily
+
     val baseTypography = Typography()
     val typography = baseTypography.copy(
         displayLarge = baseTypography.displayLarge.copy(fontFamily = displayFamily, fontWeight = FontWeight.Bold),
@@ -97,10 +139,10 @@ fun AethraTheme(
         headlineLarge = baseTypography.headlineLarge.copy(fontFamily = displayFamily, fontWeight = FontWeight.Bold),
         headlineMedium = baseTypography.headlineMedium.copy(fontFamily = displayFamily, fontWeight = FontWeight.SemiBold),
         titleLarge = baseTypography.titleLarge.copy(fontFamily = displayFamily, fontWeight = FontWeight.SemiBold),
-        labelSmall = baseTypography.labelSmall.copy(
-            fontFamily = if (style == VisualStyle.NEO_CONSTRUCTIVIST_POP) FontFamily.Monospace else FontFamily.SansSerif,
-            fontWeight = FontWeight.Bold
-        )
+        bodyLarge = baseTypography.bodyLarge.copy(fontFamily = bodyFamily),
+        bodyMedium = baseTypography.bodyMedium.copy(fontFamily = bodyFamily),
+        bodySmall = baseTypography.bodySmall.copy(fontFamily = bodyFamily),
+        labelSmall = baseTypography.labelSmall.copy(fontFamily = labelFamily, fontWeight = FontWeight.Bold)
     )
 
     val scheme = if (mode == ThemeMode.DARK) {
