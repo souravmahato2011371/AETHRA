@@ -28,6 +28,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -425,7 +427,7 @@ private fun StyleChoice(
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth().animateContentSize(),
-        shape = RoundedCornerShape(if (style == VisualStyle.NEO_CONSTRUCTIVIST_POP) 14.dp else 22.dp),
+        shape = RoundedCornerShape(if (style == VisualStyle.NEO_CONSTRUCTIVIST_POP) 3.dp else 22.dp),
         border = BorderStroke(if (selected) 2.dp else 1.dp, borderColor),
         colors = CardDefaults.cardColors(containerColor = colors.surface)
     ) {
@@ -508,7 +510,7 @@ private fun AethraExperience(
         AethraTab.SETTINGS -> emptyList()
     }
 
-    Box(Modifier.fillMaxSize().background(colors.background)) {
+    AethraVisualBackdrop(style = style, colors = colors) {
         Scaffold(
             containerColor = Color.Transparent,
             contentWindowInsets = WindowInsets.safeDrawing,
@@ -601,8 +603,8 @@ private fun AethraExperience(
         AnimatedVisibility(
             visible = nowPlayingOpen,
             modifier = Modifier.fillMaxSize(),
-            enter = fadeIn(tween(220)),
-            exit = fadeOut(tween(170))
+            enter = fadeIn(tween(240)) + slideInVertically(spring(dampingRatio = 0.82f, stiffness = 360f)) { it / 3 },
+            exit = fadeOut(tween(170)) + slideOutVertically(tween(180)) { it / 2 }
         ) {
             NowPlayingScreen(
                 track = currentTrack,
@@ -618,6 +620,7 @@ private fun AethraExperience(
                 onSeek = onSeek
             )
         }
+    }
     }
 }
 
@@ -961,8 +964,9 @@ private fun TrackRow(
     val colors = LocalAethraColors.current
     Row(
         Modifier.fillMaxWidth()
-            .clip(RoundedCornerShape(if (colors.glass) 18.dp else 14.dp))
+            .clip(RoundedCornerShape(if (colors.sharp) 2.dp else if (colors.glass) 18.dp else 14.dp))
             .background(colors.surface)
+            .then(if (colors.sharp) Modifier.border(1.5.dp, colors.text, RoundedCornerShape(2.dp)) else Modifier)
             .clickable(onClick = onPlay)
             .padding(9.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -1039,22 +1043,33 @@ private fun extractArtwork(context: Context, track: Track): Bitmap? {
 @Composable
 private fun HeroPanel(count: Int, onShuffle: () -> Unit) {
     val colors = LocalAethraColors.current
-    val shape = RoundedCornerShape(if (colors.glass) 30.dp else 20.dp)
+    val shape = RoundedCornerShape(if (colors.sharp) 3.dp else if (colors.glass) 30.dp else 20.dp)
     Box(
         Modifier.fillMaxWidth()
-            .height(190.dp)
+            .height(198.dp)
             .clip(shape)
-            .background(
-                Brush.linearGradient(
-                    listOf(colors.accent, colors.accentSecondary, colors.raised)
-                )
-            )
+            .background(if (colors.sharp) colors.raised else Brush.linearGradient(listOf(colors.accent, colors.accentSecondary, colors.raised)))
+            .then(if (colors.sharp) Modifier.border(2.dp, colors.text, shape) else Modifier)
     ) {
+        if (colors.glass) {
+            Box(Modifier.align(Alignment.CenterEnd).padding(end = 22.dp)) { AethraLiquidLens() }
+        }
         Canvas(Modifier.fillMaxSize()) {
-            drawCircle(Color.White.copy(alpha = 0.16f), size.minDimension * 0.48f, androidx.compose.ui.geometry.Offset(size.width * 0.99f, size.height * 0.08f))
-            drawCircle(Color.Black.copy(alpha = 0.08f), size.minDimension * 0.2f, androidx.compose.ui.geometry.Offset(size.width * 0.82f, size.height * 0.9f))
-            if (!colors.glass) {
-                drawRect(Color.White.copy(alpha = 0.18f), androidx.compose.ui.geometry.Offset(size.width * 0.74f, size.height * 0.52f), androidx.compose.ui.geometry.Size(size.width * 0.17f, size.height * 0.13f))
+            if (colors.sharp) {
+                drawRect(colors.accent, topLeft = androidx.compose.ui.geometry.Offset.Zero, size = androidx.compose.ui.geometry.Size(size.width * 0.48f, size.height))
+                drawRect(colors.accentSecondary, topLeft = androidx.compose.ui.geometry.Offset(size.width * 0.48f, 0f), size = androidx.compose.ui.geometry.Size(size.width * 0.52f, size.height * 0.66f))
+                drawRect(colors.text, topLeft = androidx.compose.ui.geometry.Offset(size.width * 0.72f, size.height * 0.66f), size = androidx.compose.ui.geometry.Size(size.width * 0.28f, size.height * 0.34f))
+                var x = 0f
+                while (x < size.width) {
+                    drawLine(colors.text.copy(alpha = 0.16f), androidx.compose.ui.geometry.Offset(x, 0f), androidx.compose.ui.geometry.Offset(x, size.height), 1.dp.toPx())
+                    x += 28.dp.toPx()
+                }
+            } else {
+                drawCircle(Color.White.copy(alpha = 0.16f), size.minDimension * 0.48f, androidx.compose.ui.geometry.Offset(size.width * 0.99f, size.height * 0.08f))
+                drawCircle(Color.Black.copy(alpha = 0.08f), size.minDimension * 0.2f, androidx.compose.ui.geometry.Offset(size.width * 0.82f, size.height * 0.9f))
+                if (!colors.glass) {
+                    drawRect(Color.White.copy(alpha = 0.18f), androidx.compose.ui.geometry.Offset(size.width * 0.74f, size.height * 0.52f), androidx.compose.ui.geometry.Size(size.width * 0.17f, size.height * 0.13f))
+                }
             }
         }
         Column(
@@ -1064,27 +1079,27 @@ private fun HeroPanel(count: Int, onShuffle: () -> Unit) {
             Text("AETHRA  /  YOUR MUSIC", color = Color.White.copy(alpha = 0.8f), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp)
             Column {
                 Text(
-                    if (colors.glass) "Sound in motion." else "Made for\nlistening.",
-                    color = Color.White,
+                    if (colors.glass) "Sound in motion." else if (colors.sharp) "MAKE\nROOM FOR\nMUSIC." else "Made for\nlistening.",
+                    color = if (colors.sharp) Color(0xFF171717) else Color.White,
                     fontSize = 31.sp,
                     lineHeight = 33.sp,
                     fontWeight = FontWeight.Black,
                     letterSpacing = (-0.8).sp
                 )
-                Text(count.toString() + " TRACKS IN YOUR LIBRARY", color = Color.White.copy(alpha = 0.8f), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
+                Text(if (colors.sharp) "A NEW SOUND IS OUT THERE" else count.toString() + " TRACKS IN YOUR LIBRARY", color = if (colors.sharp) Color(0xFF171717) else Color.White.copy(alpha = 0.8f), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Button(
                     onClick = onShuffle,
-                    shape = RoundedCornerShape(if (colors.glass) 24.dp else 10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF141619))
+                    shape = RoundedCornerShape(if (colors.sharp) 2.dp else if (colors.glass) 24.dp else 10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = if (colors.sharp) Color(0xFF171717) else Color.White, contentColor = if (colors.sharp) Color(0xFFFFBD2E) else Color(0xFF141619))
                 ) {
                     Icon(Icons.Rounded.Shuffle, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(7.dp))
                     Text("SHUFFLE", fontWeight = FontWeight.Bold, fontSize = 10.sp)
                 }
                 Spacer(Modifier.width(10.dp))
-                Text("NO AETHRA ADS", color = Color.White.copy(alpha = 0.82f), fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Text(if (colors.sharp) "INDEPENDENT SOUND / ZERO AETHRA ADS" else "NO AETHRA ADS", color = if (colors.sharp) Color(0xFF171717) else Color.White.copy(alpha = 0.82f), fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             }
         }
     }
@@ -1095,22 +1110,9 @@ private fun AethraCard(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val colors = LocalAethraColors.current
-    val shape = RoundedCornerShape(if (colors.glass) 24.dp else 18.dp)
-    val borderBrush = Brush.linearGradient(
-        listOf(colors.outline.copy(alpha = 0.85f), Color.White.copy(alpha = if (colors.glass) 0.44f else 0.06f), colors.outline.copy(alpha = 0.55f))
-    )
-    Column(
-        modifier
-            .clip(shape)
-            .background(
-                if (colors.glass) {
-                    Brush.linearGradient(listOf(colors.surface, colors.raised.copy(alpha = 0.78f)))
-                } else {
-                    Brush.linearGradient(listOf(colors.surface, colors.surface))
-                }
-            )
-            .border(1.dp, borderBrush, shape),
+    AethraSurfaceCard(
+        modifier = modifier,
+        colors = LocalAethraColors.current,
         content = content
     )
 }
