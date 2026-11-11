@@ -1496,7 +1496,8 @@ private fun readTracks(context: Context): List<Track> {
         MediaStore.Audio.Media.TITLE,
         MediaStore.Audio.Media.ARTIST,
         MediaStore.Audio.Media.ALBUM,
-        MediaStore.Audio.Media.DURATION
+        MediaStore.Audio.Media.DURATION,
+        MediaStore.Audio.Media.DISPLAY_NAME
     )
     val result = mutableListOf<Track>()
     context.contentResolver.query(
