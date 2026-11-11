@@ -14,7 +14,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.Font as LocalFont
 import androidx.compose.ui.text.googlefonts.Font as GoogleFontResource
 import androidx.compose.ui.text.googlefonts.GoogleFont
-import com.skydoves.cloudy.Sky
 
 // Kept for the legacy launcher preview that remains in the source tree.
 object AethraPalette {
@@ -63,7 +62,6 @@ val LocalAethraColors = staticCompositionLocalOf {
     )
 }
 
-val LocalAethraSky = staticCompositionLocalOf<Sky?> { null }
 
 private val liquidFontFamily = FontFamily(
     GoogleFontResource(googleFont = GoogleFont("Inter"), weight = FontWeight.Normal),
