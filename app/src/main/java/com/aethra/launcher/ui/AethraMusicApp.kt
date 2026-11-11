@@ -255,7 +255,7 @@ fun AethraMusicApp(controller: MediaController) {
             runCatching { context.startActivity(intent) }
             return
         }
-        val queue = (tracks + onlineTracks).distinctBy { it.stableKey }
+        val queue = tracks.distinctBy { it.stableKey }
         val selectedQueue = if (queue.any { it.stableKey == track.stableKey }) queue else listOf(track)
         val index = selectedQueue.indexOfFirst { it.stableKey == track.stableKey }.coerceAtLeast(0)
         playbackQueue = selectedQueue
@@ -270,7 +270,7 @@ fun AethraMusicApp(controller: MediaController) {
     }
 
     fun shuffleTracks() {
-        val shuffled = (tracks + onlineTracks).distinctBy { it.stableKey }.shuffled()
+        val shuffled = tracks.distinctBy { it.stableKey }.shuffled()
         if (shuffled.isNotEmpty()) {
             playbackQueue = shuffled
             queueIndex = 0
@@ -1260,7 +1260,7 @@ private fun TrackRow(
         if (isPlaying) {
             PlayingBars(Modifier.padding(horizontal = 7.dp).size(width = 16.dp, height = 18.dp), tint = colors.accent)
         }
-        Text(formatTime(track.duration), color = if (isPlaying) colors.accent else colors.muted, fontSize = 10.sp, fontWeight = if (isPlaying) FontWeight.Bold else FontWeight.Normal)
+        Text(if (track.source == "YOUTUBE") "OPEN" else formatTime(track.duration), color = if (isPlaying) colors.accent else colors.muted, fontSize = 10.sp, fontWeight = if (isPlaying) FontWeight.Bold else FontWeight.Normal)
         IconButton(onClick = onLike) {
             Icon(
                 if (isLiked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
