@@ -52,6 +52,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -157,6 +158,8 @@ fun AethraMusicApp(controller: MediaController) {
     var onlineTracks by remember { mutableStateOf(emptyList<Track>()) }
     var onlineCatalogLoading by remember { mutableStateOf(false) }
     var onlineCatalogError by remember { mutableStateOf("") }
+    var playbackQueue by remember { mutableStateOf(emptyList<Track>()) }
+    var queueIndex by remember { mutableIntStateOf(-1) }
     var activeTab by remember { mutableStateOf(AethraTab.HOME) }
     var query by remember { mutableStateOf("") }
     var liked by remember {
@@ -214,12 +217,14 @@ fun AethraMusicApp(controller: MediaController) {
         }
     }
 
-    DisposableEffect(controller, tracks, onlineTracks) {
+    DisposableEffect(controller, tracks, onlineTracks, playbackQueue) {
         val listener = object : androidx.media3.common.Player.Listener {
             override fun onMediaItemTransition(item: MediaItem?, reason: Int) {
                 currentTitle = item?.mediaMetadata?.title?.toString().orEmpty()
                 currentArtist = item?.mediaMetadata?.artist?.toString().orEmpty()
-                currentTrack = (tracks + onlineTracks).firstOrNull { it.stableKey == item?.mediaId }
+                queueIndex = controller.currentMediaItemIndex
+                currentTrack = playbackQueue.firstOrNull { it.stableKey == item?.mediaId }
+                    ?: (tracks + onlineTracks).firstOrNull { it.stableKey == item?.mediaId }
             }
 
             override fun onIsPlayingChanged(isNowPlaying: Boolean) {
@@ -245,10 +250,12 @@ fun AethraMusicApp(controller: MediaController) {
     }
 
     fun playTrack(track: Track) {
-        val queue = if (track.source == "INTERNET_ARCHIVE") onlineTracks else tracks
-        val playlist = queue.map { it.asMediaItem() }
-        val index = queue.indexOfFirst { it.stableKey == track.stableKey }.coerceAtLeast(0)
-        controller.setMediaItems(playlist, index, 0L)
+        val queue = (tracks + onlineTracks).distinctBy { it.stableKey }
+        val selectedQueue = if (queue.any { it.stableKey == track.stableKey }) queue else listOf(track)
+        val index = selectedQueue.indexOfFirst { it.stableKey == track.stableKey }.coerceAtLeast(0)
+        playbackQueue = selectedQueue
+        queueIndex = index
+        controller.setMediaItems(selectedQueue.map { it.asMediaItem() }, index, 0L)
         controller.prepare()
         controller.play()
         currentTrack = track
@@ -258,8 +265,10 @@ fun AethraMusicApp(controller: MediaController) {
     }
 
     fun shuffleTracks() {
-        val shuffled = tracks.shuffled()
+        val shuffled = (tracks + onlineTracks).distinctBy { it.stableKey }.shuffled()
         if (shuffled.isNotEmpty()) {
+            playbackQueue = shuffled
+            queueIndex = 0
             controller.setMediaItems(shuffled.map { it.asMediaItem() })
             controller.prepare()
             controller.play()
@@ -309,6 +318,15 @@ fun AethraMusicApp(controller: MediaController) {
                 isPlaying = isPlaying,
                 positionMs = positionMs,
                 durationMs = durationMs,
+                playbackQueue = playbackQueue,
+                queueIndex = queueIndex,
+                onPlayQueueItem = { index ->
+                    if (index in playbackQueue.indices) {
+                        queueIndex = index
+                        controller.seekToDefaultPosition(index)
+                        controller.play()
+                    }
+                },
                 onPlayTrack = ::playTrack,
                 onShuffle = ::shuffleTracks,
                 onPlayPause = { if (controller.isPlaying) controller.pause() else controller.play() },
@@ -544,6 +562,9 @@ private fun AethraExperience(
     isPlaying: Boolean,
     positionMs: Long,
     durationMs: Long,
+    playbackQueue: List<Track>,
+    queueIndex: Int,
+    onPlayQueueItem: (Int) -> Unit,
     onPlayTrack: (Track) -> Unit,
     onShuffle: () -> Unit,
     onPlayPause: () -> Unit,
@@ -700,6 +721,9 @@ private fun AethraExperience(
                 isPlaying = isPlaying,
                 positionMs = positionMs,
                 durationMs = durationMs,
+                queue = playbackQueue,
+                queueIndex = queueIndex,
+                onPlayQueueItem = onPlayQueueItem,
                 onClose = onCloseNowPlaying,
                 onPlayPause = onPlayPause,
                 onNext = onNext,
@@ -993,7 +1017,7 @@ private fun SettingsScreen(
             Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("ABOUT AETHRA", color = colors.accent, fontWeight = FontWeight.ExtraBold, fontSize = 11.sp, letterSpacing = 1.3.sp)
                 Text("AETHRA requires no account and inserts no AETHRA advertisements. Third-party music rights and availability remain governed by their providers.", color = colors.text, fontSize = 12.sp, lineHeight = 18.sp)
-                Text("VERSION 1.3.0 · LOCAL + OPEN MUSIC", color = colors.muted, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Text("VERSION 1.4.0 · LOCAL + OPEN MUSIC", color = colors.muted, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             }
         }
     }
@@ -1007,6 +1031,9 @@ private fun NowPlayingScreen(
     isPlaying: Boolean,
     positionMs: Long,
     durationMs: Long,
+    queue: List<Track>,
+    queueIndex: Int,
+    onPlayQueueItem: (Int) -> Unit,
     onClose: () -> Unit,
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
@@ -1014,6 +1041,7 @@ private fun NowPlayingScreen(
     onSeek: (Long) -> Unit
 ) {
     val colors = LocalAethraColors.current
+    var queueOpen by remember { mutableStateOf(false) }
     val infinite = rememberInfiniteTransition(label = "cover-motion")
     val artScale by infinite.animateFloat(
         initialValue = 1f,
@@ -1033,7 +1061,7 @@ private fun NowPlayingScreen(
             Spacer(Modifier.weight(1f))
             Text("NOW PLAYING", color = colors.muted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.8.sp)
             Spacer(Modifier.weight(1f))
-            IconButton(onClick = {}) { Icon(Icons.AutoMirrored.Rounded.QueueMusic, contentDescription = "Queue", tint = colors.text) }
+            IconButton(onClick = { queueOpen = true }) { Icon(Icons.AutoMirrored.Rounded.QueueMusic, contentDescription = "Open queue", tint = colors.text) }
         }
         Spacer(Modifier.weight(0.7f))
         TrackArtwork(
@@ -1090,6 +1118,61 @@ private fun NowPlayingScreen(
             }
         }
         Spacer(Modifier.weight(0.7f))
+    }
+
+    if (queueOpen) {
+        AlertDialog(
+            onDismissRequest = { queueOpen = false },
+            title = {
+                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text("Up next", color = colors.text, fontWeight = FontWeight.Bold)
+                    Text("${queue.size} tracks in this queue", color = colors.muted, fontSize = 12.sp)
+                }
+            },
+            text = {
+                if (queue.isEmpty()) {
+                    Text("Your queue is empty. Play a track to get started.", color = colors.muted)
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 380.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        itemsIndexed(queue, key = { index, item -> "${item.stableKey}:$index" }) { index, item ->
+                            Row(
+                                Modifier.fillMaxWidth()
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(if (index == queueIndex) colors.accent.copy(alpha = 0.14f) else Color.Transparent)
+                                    .clickable {
+                                        onPlayQueueItem(index)
+                                        queueOpen = false
+                                    }
+                                    .padding(horizontal = 10.dp, vertical = 11.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Text(
+                                    if (index == queueIndex) "NOW" else (index + 1).toString().padStart(2, '0'),
+                                    color = if (index == queueIndex) colors.accent else colors.muted,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.ExtraBold
+                                )
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text(item.title, color = colors.text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(item.artist, color = colors.muted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                                Text(formatTime(item.duration), color = colors.muted, fontSize = 10.sp)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { queueOpen = false }) { Text("DONE", color = colors.accent, fontWeight = FontWeight.Bold) }
+            },
+            containerColor = colors.surface,
+            titleContentColor = colors.text,
+            textContentColor = colors.text
+        )
     }
 }
 
