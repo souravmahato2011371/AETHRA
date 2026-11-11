@@ -13,6 +13,11 @@ android {
         targetSdk = 36
         versionCode = 8
         versionName = "1.5.1"
+        val youtubeApiKey = providers.gradleProperty("YOUTUBE_API_KEY")
+            .orElse(providers.environmentVariable("YOUTUBE_API_KEY"))
+            .orElse("")
+            .get()
+        buildConfigField("String", "YOUTUBE_API_KEY", "\"$youtubeApiKey\"")
     }
 
     buildFeatures {
@@ -20,13 +25,6 @@ android {
         buildConfig = true
     }
 
-    val youtubeApiKey = providers.gradleProperty("YOUTUBE_API_KEY")
-        .orElse(providers.environmentVariable("YOUTUBE_API_KEY"))
-        .orElse("")
-        .get()
-    defaultConfig {
-        buildConfigField("String", "YOUTUBE_API_KEY", "\"$youtubeApiKey\"")
-    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
