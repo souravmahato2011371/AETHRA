@@ -1,22 +1,20 @@
-name: AETHRA Android Build
+name: AETHRA Android Build & Release
 
 on:
   push:
     branches:
       - main
-      - aethra-dev
-      - aethra-v1-upgrade
   pull_request:
     branches:
       - main
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
-    name: Build debug APK
+    name: Build and verify Android APK
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
@@ -31,7 +29,7 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
 
-      - name: Install Android 17 SDK platform
+      - name: Install Android SDK platform
         run: |
           sdkmanager "platforms;android-37.0" "build-tools;36.0.0"
           if [ -d "$ANDROID_SDK_ROOT/platforms/android-37.0" ] && [ ! -e "$ANDROID_SDK_ROOT/platforms/android-37" ]; then
@@ -43,13 +41,33 @@ jobs:
         with:
           gradle-version: '9.8.2'
 
+      - name: Verify Kotlin and Android resources
+        run: gradle --no-daemon :app:lintDebug
+
       - name: Assemble debug APK
         run: gradle --no-daemon assembleDebug
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v7
+      - name: Read app version
+        id: app-version
+        shell: bash
+        run: |
+          VERSION="$(sed -nE 's/^[[:space:]]*versionName[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' app/build.gradle.kts | head -n1)"
+          if [ -z "$VERSION" ]; then
+            echo "Could not read versionName from app/build.gradle.kts"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Publish APK to GitHub Releases
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
         with:
-          name: aethra-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
-          retention-days: 14
+          tag_name: ${{ steps.app-version.outputs.tag }}
+          name: AETHRA v${{ steps.app-version.outputs.version }}
+          target_commitish: main
+          generate_release_notes: true
+          make_latest: true
+          overwrite_files: true
+          fail_on_unmatched_files: true
+          files: app/build/outputs/apk/debug/*.apk
