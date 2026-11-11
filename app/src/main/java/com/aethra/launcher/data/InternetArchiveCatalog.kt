@@ -33,7 +33,9 @@ object InternetArchiveCatalog {
             .filter { it.isNotBlank() }
             .map { it.replace(Regex("[^\\p{L}\\p{N}_-]"), "") }
             .filter { it.isNotBlank() }
-        val base = "mediatype:audio AND licenseurl:http*creativecommons.org/licenses/*"
+        // Search broadly first; the API's wildcard licence filter is unreliable.
+        // Each candidate is then verified against its own metadata below.
+        val base = "mediatype:audio"
         val terms = tokens.joinToString(" AND ") { token ->
             "(title:$token OR creator:$token OR subject:$token)"
         }
@@ -41,7 +43,7 @@ object InternetArchiveCatalog {
         // uploads have no subject metadata and were therefore invisible.
         val searchQuery = if (terms.isBlank()) base else "$base AND ($terms)"
         val encoded = URLEncoder.encode(searchQuery, StandardCharsets.UTF_8.name())
-        val requestUrl = "$SEARCH_ENDPOINT?q=$encoded&fl[]=identifier&fl[]=title&fl[]=creator&fl[]=licenseurl&rows=16&page=1&sort[]=downloads+desc&output=json"
+        val requestUrl = "$SEARCH_ENDPOINT?q=$encoded&fl[]=identifier&fl[]=title&fl[]=creator&fl[]=licenseurl&rows=60&page=1&sort[]=downloads+desc&output=json"
         val root = getJson(URL(requestUrl))
         val docs = root.optJSONObject("response")?.optJSONArray("docs")
             ?: throw IllegalStateException("The online catalogue returned an unexpected response.")
@@ -65,7 +67,7 @@ object InternetArchiveCatalog {
                         val format = file.optString("format")
                         !name.startsWith("__") && (
                             format.contains("MP3", true) || name.endsWith(".mp3", true) ||
-                            format.contains("Ogg Vorbis", true) || name.endsWith(".ogg", true)
+                            format.contains("Ogg Vorbis", true) || format.contains("audio", true) || name.endsWith(".ogg", true) || name.endsWith(".m4a", true) || name.endsWith(".flac", true)
                         )
                     } ?: continue
                 val fileName = audio.optString("name").takeIf { it.isNotBlank() } ?: continue
