@@ -1,0 +1,15 @@
+AETHRA Music — third-party notices
+
+RiMusic
+-------
+Upstream project: https://github.com/fast4x/RiMusic
+Upstream author/maintainer: fast4x and RiMusic contributors
+Upstream licence: GNU General Public License v3.0 (GPL-3.0)
+Upstream repository status: archived/closed at the time this integration branch was prepared.
+
+This branch is being prepared to incorporate selected RiMusic streaming and catalogue
+components. Any RiMusic-derived source files will retain their upstream copyright
+notices and be identified in their file headers or adjacent notices. The complete
+GPL-3.0 text is provided in LICENSE.
+
+No RiMusic branding, artwork, or application UI is being adopted as AETHRA branding.
