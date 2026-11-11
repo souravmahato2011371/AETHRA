@@ -668,7 +668,6 @@ private fun AethraExperience(
             )
         }
     }
-    }
 }
 
 @Composable
@@ -1197,7 +1196,10 @@ private fun HeroPanel(count: Int, onShuffle: () -> Unit) {
         Modifier.fillMaxWidth()
             .height(198.dp)
             .clip(shape)
-            .background(if (colors.sharp) colors.raised else Brush.linearGradient(listOf(colors.accent, colors.accentSecondary, colors.raised)))
+            .then(
+                if (colors.sharp) Modifier.background(colors.raised)
+                else Modifier.background(Brush.linearGradient(listOf(colors.accent, colors.accentSecondary, colors.raised)))
+            )
             .then(if (colors.sharp) Modifier.border(2.dp, colors.text, shape) else Modifier)
     ) {
         if (colors.glass) {
