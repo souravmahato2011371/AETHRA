@@ -11,8 +11,8 @@ android {
         applicationId = "com.aethra.launcher"
         minSdk = 26
         targetSdk = 36
-        versionCode = 8
-        versionName = "1.5.1"
+        versionCode = 9
+        versionName = "1.6.0"
         val youtubeApiKey = providers.gradleProperty("YOUTUBE_API_KEY")
             .orElse(providers.environmentVariable("YOUTUBE_API_KEY"))
             .orElse("")
