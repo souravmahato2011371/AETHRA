@@ -1,5 +1,15 @@
 package com.aethra.launcher.ui
 
+import androidx.compose.ui.layout.onSizeChanged
+
+import com.skydoves.cloudy.sky
+
+import com.skydoves.cloudy.rememberSky
+
+import com.skydoves.cloudy.liquidGlass
+
+import com.skydoves.cloudy.cloudy
+
 import android.Manifest
 import android.content.ContentUris
 import android.content.Context
@@ -549,6 +559,7 @@ private fun AethraExperience(
     onStyleChange: (VisualStyle) -> Unit
 ) {
     val colors = LocalAethraColors.current
+    val liquidSky = rememberSky()
     val visibleTracks = when (activeTab) {
         AethraTab.HOME -> tracks
         AethraTab.SEARCH -> tracks.filter {
@@ -565,7 +576,25 @@ private fun AethraExperience(
             containerColor = Color.Transparent,
             contentWindowInsets = WindowInsets.safeDrawing,
             bottomBar = {
-                Column(Modifier.background(colors.background)) {
+                val navigationGlassShape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+                Column(
+                    Modifier.fillMaxWidth().then(
+                        if (colors.glass) {
+                            Modifier
+                                .clip(navigationGlassShape)
+                                .cloudy(
+                                    sky = liquidSky,
+                                    radius = 22,
+                                    tint = Color(0xFFB9D8FF).copy(alpha = 0.16f),
+                                    shape = navigationGlassShape
+                                )
+                                .background(Color(0xFFB9D8FF).copy(alpha = 0.075f))
+                                .border(1.dp, Color.White.copy(alpha = 0.24f), navigationGlassShape)
+                        } else {
+                            Modifier.background(colors.background)
+                        }
+                    )
+                ) {
                     AnimatedVisibility(
                         visible = currentTitle.isNotBlank(),
                         enter = fadeIn(tween(200)) + androidx.compose.animation.expandVertically(tween(240)),
@@ -581,7 +610,10 @@ private fun AethraExperience(
                             onNext = onNext
                         )
                     }
-                    NavigationBar(containerColor = colors.surface, tonalElevation = 0.dp) {
+                    NavigationBar(
+                        containerColor = if (colors.glass) Color.Transparent else colors.surface,
+                        tonalElevation = 0.dp
+                    ) {
                         val destinations = listOf(
                             Triple(AethraTab.HOME, "Home", Icons.Rounded.Home),
                             Triple(AethraTab.SEARCH, "Search", Icons.Rounded.Search),
@@ -609,7 +641,7 @@ private fun AethraExperience(
         ) { insets ->
             AnimatedContent(
                 targetState = activeTab,
-                modifier = Modifier.fillMaxSize().padding(insets),
+                modifier = Modifier.fillMaxSize().padding(insets).then(if (colors.glass) Modifier.sky(liquidSky) else Modifier),
                 transitionSpec = {
                     (fadeIn(tween(230)) + slideInHorizontally(tween(230)) { it / 18 }) togetherWith
                         (fadeOut(tween(150)) + slideOutHorizontally(tween(150)) { -it / 24 })
@@ -1199,9 +1231,26 @@ private fun extractArtwork(context: Context, track: Track): Bitmap? {
 private fun HeroPanel(count: Int, onShuffle: () -> Unit) {
     val colors = LocalAethraColors.current
     val shape = RoundedCornerShape(if (colors.sharp) 3.dp else if (colors.glass) 30.dp else 20.dp)
+    var heroSize by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
     Box(
         Modifier.fillMaxWidth()
             .height(198.dp)
+            .onSizeChanged { heroSize = it }
+            .then(
+                if (colors.glass && heroSize.width > 0 && heroSize.height > 0) {
+                    Modifier.liquidGlass(
+                        lensCenter = androidx.compose.ui.geometry.Offset(heroSize.width * 0.82f, heroSize.height * 0.5f),
+                        lensSize = androidx.compose.ui.geometry.Size(heroSize.width * 0.34f, heroSize.height * 0.94f),
+                        cornerRadius = heroSize.height * 0.47f,
+                        refraction = 0.30f,
+                        curve = 0.32f,
+                        dispersion = 0.018f,
+                        saturation = 1.10f,
+                        contrast = 1.06f,
+                        edge = 0.34f
+                    )
+                } else Modifier
+            )
             .clip(shape)
             .then(
                 if (colors.sharp) Modifier.background(colors.raised)
@@ -1209,9 +1258,6 @@ private fun HeroPanel(count: Int, onShuffle: () -> Unit) {
             )
             .then(if (colors.sharp) Modifier.border(2.dp, colors.text, shape) else Modifier)
     ) {
-        if (colors.glass) {
-            Box(Modifier.align(Alignment.CenterEnd).padding(end = 22.dp)) { AethraLiquidLens() }
-        }
         Canvas(Modifier.fillMaxSize()) {
             if (colors.sharp) {
                 drawRect(colors.accent, topLeft = androidx.compose.ui.geometry.Offset.Zero, size = androidx.compose.ui.geometry.Size(size.width * 0.48f, size.height))
