@@ -1267,6 +1267,41 @@ private fun TrackRow(
 }
 
 @Composable
+private fun PlayingBars(modifier: Modifier = Modifier, tint: Color) {
+    val transition = rememberInfiniteTransition(label = "aethra-playing-bars")
+    val first by transition.animateFloat(
+        initialValue = 0.25f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(420), RepeatMode.Reverse),
+        label = "playing-bar-one"
+    )
+    val second by transition.animateFloat(
+        initialValue = 0.85f,
+        targetValue = 0.3f,
+        animationSpec = infiniteRepeatable(tween(560), RepeatMode.Reverse),
+        label = "playing-bar-two"
+    )
+    val third by transition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(360), RepeatMode.Reverse),
+        label = "playing-bar-three"
+    )
+    Canvas(modifier) {
+        val barWidth = size.width / 5f
+        listOf(first, second, third).forEachIndexed { index, level ->
+            val barHeight = size.height * level
+            drawRoundRect(
+                color = tint,
+                topLeft = androidx.compose.ui.geometry.Offset(index * barWidth * 2f, (size.height - barHeight) / 2f),
+                size = androidx.compose.ui.geometry.Size(barWidth, barHeight),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(barWidth / 2f)
+            )
+        }
+    }
+}
+
+@Composable
 private fun TrackArtwork(track: Track?, title: String, modifier: Modifier = Modifier) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val bitmap by produceState<Bitmap?>(initialValue = track?.let { artworkCache.get(it.stableKey) }, key1 = track?.stableKey) {
