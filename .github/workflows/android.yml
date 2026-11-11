@@ -12,6 +12,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: aethra-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: Build and verify Android APK
