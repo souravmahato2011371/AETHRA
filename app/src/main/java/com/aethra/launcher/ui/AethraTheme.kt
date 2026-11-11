@@ -14,6 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.Font as LocalFont
 import androidx.compose.ui.text.googlefonts.Font as GoogleFontResource
 import androidx.compose.ui.text.googlefonts.GoogleFont
+import com.skydoves.cloudy.Sky
 
 // Kept for the legacy launcher preview that remains in the source tree.
 object AethraPalette {
@@ -30,8 +31,8 @@ object AethraPalette {
 enum class ThemeMode { LIGHT, DARK }
 
 enum class VisualStyle(val title: String, val subtitle: String) {
-    LIQUID_GLASS("Liquid Glass", "Translucent depth, cool light and fluid surfaces"),
-    NEO_CONSTRUCTIVIST_POP("Neo-Constructivist Pop", "Bold geometry, expressive type and vivid color"),
+    LIQUID_GLASS("Liquid Glass", "Optical depth, backdrop blur, refraction and moving light"),
+    NEO_CONSTRUCTIVIST_POP("Neo-Constructivist Pop", "Swiss structure, warm paper, vivid geometry and tactile edges"),
     SIGNATURE_PREMIUM("Signature Premium", "Quiet luxury, warm materials and refined detail")
 }
 
@@ -44,7 +45,8 @@ data class AethraColors(
     val accent: Color,
     val accentSecondary: Color,
     val outline: Color,
-    val glass: Boolean
+    val glass: Boolean,
+    val sharp: Boolean = false
 )
 
 val LocalAethraColors = staticCompositionLocalOf {
@@ -61,10 +63,12 @@ val LocalAethraColors = staticCompositionLocalOf {
     )
 }
 
+val LocalAethraSky = staticCompositionLocalOf<Sky?> { null }
+
 private val liquidFontFamily = FontFamily(
-    GoogleFontResource(googleFont = GoogleFont("Manrope"), weight = FontWeight.Normal),
-    GoogleFontResource(googleFont = GoogleFont("Manrope"), weight = FontWeight.Medium),
-    GoogleFontResource(googleFont = GoogleFont("Manrope"), weight = FontWeight.Bold),
+    GoogleFontResource(googleFont = GoogleFont("Inter"), weight = FontWeight.Normal),
+    GoogleFontResource(googleFont = GoogleFont("Inter"), weight = FontWeight.Medium),
+    GoogleFontResource(googleFont = GoogleFont("Inter"), weight = FontWeight.Bold),
     LocalFont(DeviceFontFamilyName("sans-serif"))
 )
 
@@ -75,9 +79,16 @@ private val neoDisplayFontFamily = FontFamily(
     LocalFont(DeviceFontFamilyName("sans-serif"))
 )
 
+private val neoBodyFontFamily = FontFamily(
+    GoogleFontResource(googleFont = GoogleFont("Manrope"), weight = FontWeight.Normal),
+    GoogleFontResource(googleFont = GoogleFont("Manrope"), weight = FontWeight.Medium),
+    GoogleFontResource(googleFont = GoogleFont("Manrope"), weight = FontWeight.Bold),
+    LocalFont(DeviceFontFamilyName("sans-serif"))
+)
+
 private val neoLabelFontFamily = FontFamily(
-    GoogleFontResource(googleFont = GoogleFont("Space Mono"), weight = FontWeight.Normal),
-    GoogleFontResource(googleFont = GoogleFont("Space Mono"), weight = FontWeight.Bold),
+    GoogleFontResource(googleFont = GoogleFont("DM Mono"), weight = FontWeight.Normal),
+    GoogleFontResource(googleFont = GoogleFont("DM Mono"), weight = FontWeight.Medium),
     LocalFont(DeviceFontFamilyName("monospace"))
 )
 
@@ -102,15 +113,31 @@ fun AethraTheme(
 ) {
     val colors = when (style) {
         VisualStyle.LIQUID_GLASS -> if (mode == ThemeMode.DARK) {
-            AethraColors(Color(0xFF0A1020), Color(0xCC1A2844), Color(0xE6243858), Color(0xFFF5F8FF), Color(0xFFB5C2D8), Color(0xFFB9C9FF), Color(0xFF70E2E2), Color(0x66FFFFFF), true)
+            AethraColors(
+                Color(0xFF080F22), Color(0xB8253E67), Color(0xB85D83B7),
+                Color(0xFFF7FAFF), Color(0xFFB9C9E2), Color(0xFFD7E5FF),
+                Color(0xFF79E5E8), Color(0xBFFFFFFF), true
+            )
         } else {
-            AethraColors(Color(0xFFE9EFF8), Color(0xDDFBFDFF), Color(0xEAF3F7FF), Color(0xFF172235), Color(0xFF62718A), Color(0xFF526FBE), Color(0xFF168F9C), Color(0xAAFFFFFF), true)
+            AethraColors(
+                Color(0xFFE4EDF8), Color(0xA6FFFFFF), Color(0xA9D9E8F8),
+                Color(0xFF15263E), Color(0xFF5E718B), Color(0xFF385FA8),
+                Color(0xFF087F91), Color(0xBFFFFFFF), true
+            )
         }
 
         VisualStyle.NEO_CONSTRUCTIVIST_POP -> if (mode == ThemeMode.DARK) {
-            AethraColors(Color(0xFF101211), Color(0xFF202622), Color(0xFF303A32), Color(0xFFF4F0E6), Color(0xFFA5ADA2), Color(0xFFC5F36A), Color(0xFFFF5938), Color(0xFF4A554C), false)
+            AethraColors(
+                Color(0xFF151518), Color(0xFF242427), Color(0xFFFFBD2E),
+                Color(0xFFF4EFDF), Color(0xFFC3BBAE), Color(0xFFFF523B),
+                Color(0xFF5372FF), Color(0xFFF4EFDF), false, sharp = true
+            )
         } else {
-            AethraColors(Color(0xFFF4F0E6), Color(0xFFFFFFFF), Color(0xFFE9E2D4), Color(0xFF151714), Color(0xFF666C63), Color(0xFFB9E84F), Color(0xFFEE5332), Color(0xFFCCC4B5), false)
+            AethraColors(
+                Color(0xFFF4EFDF), Color(0xFFFFFAF0), Color(0xFFFFBD2E),
+                Color(0xFF171717), Color(0xFF4D4A43), Color(0xFFF0442E),
+                Color(0xFF234BE7), Color(0xFF171717), false, sharp = true
+            )
         }
 
         VisualStyle.SIGNATURE_PREMIUM -> if (mode == ThemeMode.DARK) {
@@ -127,10 +154,14 @@ fun AethraTheme(
     }
     val bodyFamily = when (style) {
         VisualStyle.LIQUID_GLASS -> liquidFontFamily
-        VisualStyle.NEO_CONSTRUCTIVIST_POP -> neoDisplayFontFamily
+        VisualStyle.NEO_CONSTRUCTIVIST_POP -> neoBodyFontFamily
         VisualStyle.SIGNATURE_PREMIUM -> premiumBodyFontFamily
     }
-    val labelFamily = if (style == VisualStyle.NEO_CONSTRUCTIVIST_POP) neoLabelFontFamily else bodyFamily
+    val labelFamily = when (style) {
+        VisualStyle.NEO_CONSTRUCTIVIST_POP -> neoLabelFontFamily
+        VisualStyle.LIQUID_GLASS -> liquidFontFamily
+        VisualStyle.SIGNATURE_PREMIUM -> premiumBodyFontFamily
+    }
 
     val baseTypography = Typography()
     val typography = baseTypography.copy(
@@ -148,28 +179,28 @@ fun AethraTheme(
     val scheme = if (mode == ThemeMode.DARK) {
         darkColorScheme(
             primary = colors.accent,
-            onPrimary = colors.background,
+            onPrimary = if (style == VisualStyle.NEO_CONSTRUCTIVIST_POP) Color(0xFF171717) else colors.background,
             secondary = colors.accentSecondary,
             onSecondary = colors.background,
             background = colors.background,
             onBackground = colors.text,
             surface = colors.surface,
             onSurface = colors.text,
-            surfaceVariant = colors.raised,
+            surfaceVariant = if (colors.sharp) Color(0xFF302E2B) else colors.raised,
             onSurfaceVariant = colors.muted,
             outline = colors.outline
         )
     } else {
         lightColorScheme(
             primary = colors.accent,
-            onPrimary = if (style == VisualStyle.NEO_CONSTRUCTIVIST_POP) Color(0xFF151714) else Color.White,
+            onPrimary = if (style == VisualStyle.NEO_CONSTRUCTIVIST_POP) Color(0xFF171717) else Color.White,
             secondary = colors.accentSecondary,
             onSecondary = colors.background,
             background = colors.background,
             onBackground = colors.text,
             surface = colors.surface,
             onSurface = colors.text,
-            surfaceVariant = colors.raised,
+            surfaceVariant = if (colors.sharp) Color(0xFFE8E0CE) else colors.raised,
             onSurfaceVariant = colors.muted,
             outline = colors.outline
         )
