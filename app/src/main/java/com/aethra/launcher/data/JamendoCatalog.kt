@@ -28,7 +28,7 @@ object JamendoCatalog {
             val safeClientId = URLEncoder.encode(clientId.trim(), StandardCharsets.UTF_8.name())
             val safeQuery = URLEncoder.encode(query.trim(), StandardCharsets.UTF_8.name())
             val searchPart = if (query.isBlank()) {
-                "order=popularity_week_desc&fuzzytags=pop"
+                "order=popularity_week&fuzzytags=pop"
             } else {
                 "search=$safeQuery&order=relevance"
             }
