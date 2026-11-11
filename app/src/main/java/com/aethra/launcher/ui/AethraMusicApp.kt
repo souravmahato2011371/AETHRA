@@ -145,6 +145,8 @@ fun AethraMusicApp(controller: MediaController) {
     }
     var tracks by remember { mutableStateOf(emptyList<Track>()) }
     var onlineTracks by remember { mutableStateOf(emptyList<Track>()) }
+    var onlineCatalogLoading by remember { mutableStateOf(false) }
+    var onlineCatalogError by remember { mutableStateOf("") }
     var activeTab by remember { mutableStateOf(AethraTab.HOME) }
     var query by remember { mutableStateOf("") }
     var liked by remember {
@@ -187,6 +189,18 @@ fun AethraMusicApp(controller: MediaController) {
     LaunchedEffect(audioPermission) {
         if (audioPermission) {
             tracks = withContext(Dispatchers.IO) { readTracks(context) }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        onlineCatalogLoading = true
+        try {
+            onlineTracks = InternetArchiveCatalog.search("").map { it.asAppTrack() }
+            onlineCatalogError = ""
+        } catch (error: Exception) {
+            onlineCatalogError = error.message ?: "Online discovery is temporarily unavailable."
+        } finally {
+            onlineCatalogLoading = false
         }
     }
 
@@ -601,6 +615,9 @@ private fun AethraExperience(
                 when (page) {
                     AethraTab.HOME -> HomeScreen(
                         tracks = tracks,
+                        onlineTracks = onlineTracks,
+                        onlineLoading = onlineCatalogLoading,
+                        onlineError = onlineCatalogError,
                         audioPermission = audioPermission,
                         requestAudioPermission = requestAudioPermission,
                         liked = liked,
@@ -660,6 +677,9 @@ private fun AethraExperience(
 @Composable
 private fun HomeScreen(
     tracks: List<Track>,
+    onlineTracks: List<Track>,
+    onlineLoading: Boolean,
+    onlineError: String,
     audioPermission: Boolean,
     requestAudioPermission: () -> Unit,
     liked: Set<String>,
@@ -705,8 +725,8 @@ private fun HomeScreen(
         } else if (tracks.isEmpty()) {
             AethraCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("NOTHING IN THE LIBRARY YET", color = colors.accent, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
-                    Text("Once audio files are available on this device, AETHRA will discover them here. Online catalogue playback is a separate provider integration and is not active in this build.", color = colors.text, fontSize = 13.sp, lineHeight = 19.sp)
+                    Text("YOUR LOCAL LIBRARY IS EMPTY", color = colors.accent, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("You can still discover and play openly licensed online audio below.", color = colors.text, fontSize = 13.sp, lineHeight = 19.sp)
                 }
             }
         } else {
@@ -715,6 +735,27 @@ private fun HomeScreen(
                 TrackRow(
                     track = track,
                     isLiked = liked.contains(track.id.toString()),
+                    onPlay = { onPlayTrack(track) },
+                    onLike = { onToggleLike(track) }
+                )
+            }
+        }
+
+        SectionHeading("DISCOVER ONLINE", if (onlineLoading) "LOADING" else onlineTracks.size.toString() + " TRACKS")
+        if (onlineCatalogError.isNotBlank()) {
+            Text(onlineCatalogError, color = colors.muted, fontSize = 12.sp)
+        } else if (onlineLoading && onlineTracks.isEmpty()) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = colors.accent)
+                Text("Finding openly licensed music…", color = colors.muted, fontSize = 12.sp)
+            }
+        } else if (onlineTracks.isEmpty()) {
+            Text("No online tracks are available right now. Try Discover again later.", color = colors.muted, fontSize = 12.sp)
+        } else {
+            onlineTracks.take(8).forEach { track ->
+                TrackRow(
+                    track = track,
+                    isLiked = liked.contains(track.stableKey),
                     onPlay = { onPlayTrack(track) },
                     onLike = { onToggleLike(track) }
                 )
