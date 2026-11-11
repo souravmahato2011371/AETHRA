@@ -38,7 +38,7 @@ object InternetArchiveCatalog {
             }
             val searchQuery = if (terms.isBlank()) "$base AND subject:music" else "$base AND ($terms)"
             val encoded = URLEncoder.encode(searchQuery, StandardCharsets.UTF_8.name())
-            val root = getJson(URL("$SEARCH_ENDPOINT?q=$encoded&fl[]=identifier,title,creator,licenseurl&rows=24&page=1&output=json"))
+            val root = getJson(URL("$SEARCH_ENDPOINT?q=$encoded&fl[]=identifier&fl[]=title&fl[]=creator&fl[]=licenseurl&rows=24&page=1&output=json"))
             val docs = root.optJSONObject("response")?.optJSONArray("docs")
                 ?: return@withContext emptyList()
 
@@ -67,7 +67,7 @@ object InternetArchiveCatalog {
                     }
                     val title = item.optString("title").ifBlank { doc.optString("title") }.ifBlank { "Untitled audio" }
                     val artist = item.optString("creator").ifBlank { doc.optString("creator") }.ifBlank { "Independent creator" }
-                    val duration = audio.optString("length").toDoubleOrNull()?.toLong() ?: 0L
+                    val duration = item.optString("runtime").toDoubleOrNull()?.toLong() ?: 0L
                     add(
                         OnlineTrack(
                             id = "$identifier:$fileName".hashCode().toString(),
