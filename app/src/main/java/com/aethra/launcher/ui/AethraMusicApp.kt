@@ -880,23 +880,33 @@ private fun SearchScreen(
         } else {
             Text("INTERNET ARCHIVE · OPENLY LICENSED AUDIO", color = colors.muted, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
         }
-        if (onlineTracks.isNotEmpty()) {
-            SectionHeading("ONLINE DISCOVERY", onlineTracks.size.toString() + " TRACKS")
-            onlineTracks.take(24).forEach { track ->
-                TrackRow(track, liked.contains(track.stableKey), { onPlayTrack(track) }, { onToggleLike(track) })
+        val unifiedResults = (tracks + onlineTracks).distinctBy { it.stableKey }
+        SectionHeading(
+            if (query.isBlank()) "YOUR MUSIC & OPEN DISCOVERY" else "ALL MATCHING MUSIC",
+            unifiedResults.size.toString() + " TRACKS"
+        )
+        if (unifiedResults.isEmpty()) {
+            if (hasSearched && !loading && onlineError.isBlank()) {
+                EmptyState("NO MATCHES FOUND", "Try another title, artist or genre. Local tracks are matched instantly; online results come from the open catalogue.")
+            } else if (tracks.isEmpty()) {
+                Text("Search for a song or artist to explore the open catalogue. Music stored on this device will appear here too.", color = colors.muted, fontSize = 12.sp, lineHeight = 18.sp)
             }
-            Text("Rights and licence information are supplied by each archive item. Verify the item licence before reuse or redistribution.", color = colors.muted, fontSize = 10.sp, lineHeight = 15.sp)
-        } else if (hasSearched && !loading && onlineError.isBlank()) {
-            EmptyState("NO ONLINE MATCHES", "Try another track, artist or genre.")
-        }
-        SectionHeading("ON THIS DEVICE", tracks.size.toString() + " TRACKS")
-        if (tracks.isEmpty()) {
-            Text("No local music found yet.", color = colors.muted, fontSize = 12.sp)
         } else {
-            tracks.take(18).forEach { track ->
-                TrackRow(track, liked.contains(track.stableKey) || liked.contains(track.id.toString()), { onPlayTrack(track) }, { onToggleLike(track) })
+            unifiedResults.take(48).forEach { track ->
+                TrackRow(
+                    track,
+                    liked.contains(track.stableKey) || (track.source == "LOCAL" && liked.contains(track.id.toString())),
+                    { onPlayTrack(track) },
+                    { onToggleLike(track) }
+                )
             }
         }
+        Text(
+            "Online results are openly licensed archive recordings, not a complete commercial music catalogue. Check each item's licence for reuse.",
+            color = colors.muted,
+            fontSize = 10.sp,
+            lineHeight = 15.sp
+        )
     }
 }
 
