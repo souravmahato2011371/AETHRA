@@ -94,7 +94,7 @@ import androidx.core.content.ContextCompat
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
-import com.aethra.launcher.data.InternetArchiveCatalog
+import com.aethra.launcher.data.YouTubeDataCatalog
 import androidx.media3.session.MediaController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -123,7 +123,7 @@ private fun com.aethra.launcher.data.OnlineTrack.asAppTrack(): Track = Track(
     album = album,
     duration = durationSeconds * 1000L,
     uri = android.net.Uri.parse(streamUrl),
-    source = "INTERNET_ARCHIVE",
+    source = "YOUTUBE",
     artworkUrl = artworkUrl,
     shareUrl = shareUrl,
     licenseUrl = licenseUrl
@@ -208,7 +208,7 @@ fun AethraMusicApp(controller: MediaController) {
     LaunchedEffect(Unit) {
         onlineCatalogLoading = true
         try {
-            onlineTracks = InternetArchiveCatalog.search("").map { it.asAppTrack() }
+            onlineTracks = YouTubeDataCatalog.search("").map { it.asAppTrack() }
             onlineCatalogError = ""
         } catch (error: Exception) {
             onlineCatalogError = error.message ?: "Online discovery is temporarily unavailable."
@@ -250,6 +250,11 @@ fun AethraMusicApp(controller: MediaController) {
     }
 
     fun playTrack(track: Track) {
+        if (track.source == "YOUTUBE") {
+            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, track.uri)
+            runCatching { context.startActivity(intent) }
+            return
+        }
         val queue = (tracks + onlineTracks).distinctBy { it.stableKey }
         val selectedQueue = if (queue.any { it.stableKey == track.stableKey }) queue else listOf(track)
         val index = selectedQueue.indexOfFirst { it.stableKey == track.stableKey }.coerceAtLeast(0)
@@ -814,7 +819,7 @@ private fun HomeScreen(
         } else if (onlineLoading && onlineTracks.isEmpty()) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = colors.accent)
-                Text("Finding openly licensed music…", color = colors.muted, fontSize = 12.sp)
+                Text("Finding music on YouTube…", color = colors.muted, fontSize = 12.sp)
             }
         } else if (onlineTracks.isEmpty()) {
             Text("No online tracks are available right now. Try Discover again later.", color = colors.muted, fontSize = 12.sp)
@@ -855,7 +860,7 @@ private fun SearchScreen(
             loading = true
             onlineError = ""
             try {
-                onOnlineResults(InternetArchiveCatalog.search(term).map { it.asAppTrack() })
+                onOnlineResults(YouTubeDataCatalog.search(term).map { it.asAppTrack() })
                 hasSearched = true
             } catch (error: Exception) {
                 onlineError = error.message ?: "Could not reach the online music catalogue."
@@ -874,7 +879,7 @@ private fun SearchScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Text("Discover", color = colors.text, style = MaterialTheme.typography.headlineLarge, fontSize = 34.sp)
-        Text("Explore openly licensed music. No account, API key or setup required.", color = colors.muted, fontSize = 13.sp, lineHeight = 19.sp)
+        Text("Explore music videos and official listening links from YouTube.", color = colors.muted, fontSize = 13.sp, lineHeight = 19.sp)
         OutlinedTextField(
             value = query,
             onValueChange = onQueryChange,
@@ -911,7 +916,7 @@ private fun SearchScreen(
                 Text(onlineError, modifier = Modifier.padding(16.dp), color = colors.accentSecondary, fontSize = 12.sp, lineHeight = 18.sp)
             }
         } else {
-            Text("INTERNET ARCHIVE · OPENLY LICENSED AUDIO", color = colors.muted, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Text("YOUTUBE · MUSIC DISCOVERY", color = colors.muted, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
         }
         val unifiedResults = (tracks + onlineTracks).distinctBy { it.stableKey }
         SectionHeading(
@@ -920,9 +925,9 @@ private fun SearchScreen(
         )
         if (unifiedResults.isEmpty()) {
             if (hasSearched && !loading && onlineError.isBlank()) {
-                EmptyState("NO MATCHES FOUND", "Try another title, artist or genre. Local tracks are matched instantly; online results come from the open catalogue.")
+                EmptyState("NO MATCHES FOUND", "Try another title, artist or genre. Local tracks are matched instantly; online results come from YouTube.")
             } else if (tracks.isEmpty()) {
-                Text("Search for a song or artist to explore the open catalogue. Music stored on this device will appear here too.", color = colors.muted, fontSize = 12.sp, lineHeight = 18.sp)
+                Text("Search for a song or artist on YouTube. Music stored on this device will appear here too.", color = colors.muted, fontSize = 12.sp, lineHeight = 18.sp)
             }
         } else {
             unifiedResults.take(48).forEach { track ->
@@ -936,7 +941,7 @@ private fun SearchScreen(
             }
         }
         Text(
-            "Online results are openly licensed archive recordings, not a complete commercial music catalogue. Check each item's licence for reuse.",
+            "YouTube results open on YouTube for listening. Search results do not provide direct audio-stream access.",
             color = colors.muted,
             fontSize = 10.sp,
             lineHeight = 15.sp
@@ -1248,7 +1253,7 @@ private fun TrackRow(
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(track.title, color = colors.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
-                if (track.source == "INTERNET_ARCHIVE") track.artist + " · OPEN AUDIO" else track.artist,
+                if (track.source == "YOUTUBE") track.artist + " · YOUTUBE" else track.artist,
                 color = colors.muted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
             )
         }
