@@ -746,8 +746,8 @@ private fun HomeScreen(
         }
 
         SectionHeading("DISCOVER ONLINE", if (onlineLoading) "LOADING" else onlineTracks.size.toString() + " TRACKS")
-        if (onlineCatalogError.isNotBlank()) {
-            Text(onlineCatalogError, color = colors.muted, fontSize = 12.sp)
+        if (onlineError.isNotBlank()) {
+            Text(onlineError, color = colors.muted, fontSize = 12.sp)
         } else if (onlineLoading && onlineTracks.isEmpty()) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = colors.accent)
