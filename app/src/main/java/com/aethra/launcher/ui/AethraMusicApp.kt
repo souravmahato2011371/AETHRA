@@ -802,7 +802,8 @@ private fun HomeScreen(
                     track = track,
                     isLiked = liked.contains(track.id.toString()),
                     onPlay = { onPlayTrack(track) },
-                    onLike = { onToggleLike(track) }
+                    onLike = { onToggleLike(track) },
+                    isPlaying = activeTrackKey == track.stableKey
                 )
             }
         }
@@ -823,7 +824,8 @@ private fun HomeScreen(
                     track = track,
                     isLiked = liked.contains(track.stableKey),
                     onPlay = { onPlayTrack(track) },
-                    onLike = { onToggleLike(track) }
+                    onLike = { onToggleLike(track) },
+                    isPlaying = activeTrackKey == track.stableKey
                 )
             }
         }
@@ -928,7 +930,8 @@ private fun SearchScreen(
                     track,
                     liked.contains(track.stableKey) || (track.source == "LOCAL" && liked.contains(track.id.toString())),
                     { onPlayTrack(track) },
-                    { onToggleLike(track) }
+                    { onToggleLike(track) },
+                    activeTrackKey == track.stableKey
                 )
             }
         }
@@ -972,7 +975,7 @@ private fun LibraryScreen(
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(7.dp), contentPadding = PaddingValues(bottom = 18.dp)) {
                 items(tracks, key = { it.id }) { track ->
-                    TrackRow(track, true, { onPlayTrack(track) }, { onToggleLike(track) })
+                    TrackRow(track, true, { onPlayTrack(track) }, { onToggleLike(track) }, activeTrackKey == track.stableKey)
                 }
             }
         }
@@ -1223,13 +1226,18 @@ private fun TrackRow(
     track: Track,
     isLiked: Boolean,
     onPlay: () -> Unit,
-    onLike: () -> Unit
+    onLike: () -> Unit,
+    isPlaying: Boolean = false
 ) {
     val colors = LocalAethraColors.current
+    val cardColor by animateColorAsState(
+        targetValue = if (isPlaying) colors.accent.copy(alpha = if (colors.glass) 0.18f else 0.13f) else colors.surface,
+        animationSpec = tween(260), label = "track-card-active"
+    )
     Row(
         Modifier.fillMaxWidth()
-            .clip(RoundedCornerShape(if (colors.sharp) 2.dp else if (colors.glass) 18.dp else 14.dp))
-            .background(colors.surface)
+            .clip(RoundedCornerShape(if (colors.sharp) 2.dp else if (colors.glass) 20.dp else 16.dp))
+            .background(cardColor)
             .then(if (colors.sharp) Modifier.border(1.5.dp, colors.text, RoundedCornerShape(2.dp)) else Modifier)
             .clickable(onClick = onPlay)
             .padding(9.dp),
@@ -1244,7 +1252,10 @@ private fun TrackRow(
                 color = colors.muted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
             )
         }
-        Text(formatTime(track.duration), color = colors.muted, fontSize = 10.sp)
+        if (isPlaying) {
+            PlayingBars(Modifier.padding(horizontal = 7.dp).size(width = 16.dp, height = 18.dp), tint = colors.accent)
+        }
+        Text(formatTime(track.duration), color = if (isPlaying) colors.accent else colors.muted, fontSize = 10.sp, fontWeight = if (isPlaying) FontWeight.Bold else FontWeight.Normal)
         IconButton(onClick = onLike) {
             Icon(
                 if (isLiked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
