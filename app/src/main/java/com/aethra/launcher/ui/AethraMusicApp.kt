@@ -1457,11 +1457,17 @@ private fun readTracks(context: Context): List<Track> {
         val artistColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
         val albumColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
         val durationColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
+        val displayNameColumn = cursor.getColumnIndex(MediaStore.Audio.Media.DISPLAY_NAME)
         while (cursor.moveToNext()) {
             val id = cursor.getLong(idColumn)
+            val rawTitle = cursor.getString(titleColumn).orEmpty()
+            val displayName = if (displayNameColumn >= 0) cursor.getString(displayNameColumn).orEmpty() else ""
+            val fallbackTitle = displayName.substringBeforeLast('.', displayName).replace(Regex("[_-]+"), " ").trim()
+            val looksLikeIdentifier = rawTitle.matches(Regex("[0-9a-fA-F-]{20,}")) || rawTitle.matches(Regex("[A-Z0-9]{18,}"))
+            val cleanTitle = if (rawTitle.isBlank() || looksLikeIdentifier) fallbackTitle.ifBlank { "Unknown track" } else rawTitle
             result += Track(
                 id = id,
-                title = cursor.getString(titleColumn) ?: "Unknown track",
+                title = cleanTitle,
                 artist = cursor.getString(artistColumn)?.takeUnless { it == "<unknown>" } ?: "Unknown artist",
                 album = cursor.getString(albumColumn) ?: "Unknown album",
                 duration = cursor.getLong(durationColumn),
@@ -1469,7 +1475,7 @@ private fun readTracks(context: Context): List<Track> {
             )
         }
     }
-    return result
+    return result.distinctBy { it.title.trim().lowercase() + "|" + it.artist.trim().lowercase() + "|" + (it.duration / 1000L) }
 }
 
 private fun Track.asMediaItem(): MediaItem = MediaItem.Builder()
