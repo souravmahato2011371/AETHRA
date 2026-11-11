@@ -605,12 +605,12 @@ private fun AethraExperience(
                                 .clip(navigationGlassShape)
                                 .cloudy(
                                     sky = liquidSky,
-                                    radius = 22,
-                                    tint = Color(0xFFB9D8FF).copy(alpha = 0.16f),
+                                    radius = 10,
+                                    tint = Color(0xFFB9D8FF).copy(alpha = 0.09f),
                                     shape = navigationGlassShape
                                 )
-                                .background(Color(0xFFB9D8FF).copy(alpha = 0.075f))
-                                .border(1.dp, Color.White.copy(alpha = 0.24f), navigationGlassShape)
+                                .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.12f), Color(0xFF8FB9F4).copy(alpha = 0.045f), Color(0xFF17294C).copy(alpha = 0.22f))))
+                                .border(1.dp, Color.White.copy(alpha = 0.34f), navigationGlassShape)
                         } else {
                             Modifier.background(colors.background)
                         }
@@ -1333,14 +1333,14 @@ private fun HeroPanel(count: Int, onShuffle: () -> Unit) {
                 if (colors.glass && heroSize.width > 0 && heroSize.height > 0) {
                     Modifier.liquidGlass(
                         lensCenter = androidx.compose.ui.geometry.Offset(heroSize.width * 0.82f, heroSize.height * 0.5f),
-                        lensSize = androidx.compose.ui.geometry.Size(heroSize.width * 0.34f, heroSize.height * 0.94f),
-                        cornerRadius = heroSize.height * 0.47f,
-                        refraction = 0.30f,
-                        curve = 0.32f,
-                        dispersion = 0.018f,
-                        saturation = 1.10f,
-                        contrast = 1.06f,
-                        edge = 0.34f
+                        lensSize = androidx.compose.ui.geometry.Size(heroSize.width * 0.22f, heroSize.height * 0.58f),
+                        cornerRadius = heroSize.height * 0.29f,
+                        refraction = 0.16f,
+                        curve = 0.24f,
+                        dispersion = 0.008f,
+                        saturation = 1.14f,
+                        contrast = 1.10f,
+                        edge = 0.62f
                     )
                 } else Modifier
             )
