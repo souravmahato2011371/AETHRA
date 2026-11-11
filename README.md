@@ -14,9 +14,11 @@ AETHRA is an Android music player built around one simple idea: open the app and
 - A unified search experience for local tracks and the currently integrated open catalogue.
 - No AETHRA-inserted advertisements.
 
-## Current online catalogue
+## Online music integration
 
-The current online source is the Internet Archive. AETHRA searches audio items that declare a Creative Commons licence and resolves playable MP3/Ogg files when available.
+The current `main` branch uses the Internet Archive as its only online catalogue. The `integration/rimusic-streaming-core` branch is the isolated GPL-3.0 integration track for evaluating and porting selected RiMusic streaming components. RiMusic is archived/closed, so its upstream implementation must be audited and maintained before it can be treated as a reliable provider.
+
+Any RiMusic-derived source in this branch remains subject to GPL-3.0. See `LICENSE` and `THIRD_PARTY_NOTICES`. The AETHRA interface, brand, and product experience remain independently designed.
 
 This is an open catalogue, not a licensed substitute for Spotify, YouTube Music, Apple Music, or every commercial release. Search coverage, metadata, artwork, stream availability, and item-level rights vary. AETHRA does not bypass paywalls, access controls, or provider restrictions.
 
@@ -40,6 +42,10 @@ The debug APK is for testing and is not a Play Store production-signed release.
 
 The application ID is retained to preserve update compatibility with existing installations.
 
+## Licensing
+
+This integration branch is licensed under GPL-3.0 to support incorporation of compatible RiMusic-derived components. Any distributed build containing those components must comply with the GPL-3.0, including providing the corresponding source code and preserving applicable notices. This is a project engineering note, not legal advice.
+
 ## Roadmap
 
-The next engineering priorities are expanding legitimate open-catalogue coverage, strengthening playback and queue behaviour, adding persistent playlists and listening history, improving metadata/artwork reliability, and testing performance across low- and high-end Android devices. Features will only be marked complete after implementation and verification.
+The next engineering priorities are integrating and validating the RiMusic-derived catalogue/streaming layer, preserving local playback, strengthening playback and queue behaviour, adding persistent playlists and listening history, improving metadata/artwork reliability, and testing performance across low- and high-end Android devices. Features will only be marked complete after implementation and verification.
