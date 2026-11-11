@@ -41,7 +41,7 @@ object InternetArchiveCatalog {
         // uploads have no subject metadata and were therefore invisible.
         val searchQuery = if (terms.isBlank()) base else "$base AND ($terms)"
         val encoded = URLEncoder.encode(searchQuery, StandardCharsets.UTF_8.name())
-        val requestUrl = "$SEARCH_ENDPOINT?q=$encoded&fl[]=identifier&fl[]=title&fl[]=creator&fl[]=licenseurl&rows=40&page=1&sort[]=downloads+desc&output=json"
+        val requestUrl = "$SEARCH_ENDPOINT?q=$encoded&fl[]=identifier&fl[]=title&fl[]=creator&fl[]=licenseurl&rows=16&page=1&sort[]=downloads+desc&output=json"
         val root = getJson(URL(requestUrl))
         val docs = root.optJSONObject("response")?.optJSONArray("docs")
             ?: throw IllegalStateException("The online catalogue returned an unexpected response.")
@@ -73,7 +73,7 @@ object InternetArchiveCatalog {
                     URLEncoder.encode(it, StandardCharsets.UTF_8.name()).replace("+", "%20")
                 }
                 val rawTitle = item.optString("title").ifBlank { doc.optString("title") }
-                val title = rawTitle.takeIf { it.isNotBlank() && it != identifier }
+                val title = rawTitle.takeIf { it.isNotBlank() && it != identifier && !it.matches(Regex("[0-9a-fA-F-]{20,}")) }
                     ?: fileName.substringAfterLast('/').substringBeforeLast('.')
                         .replace(Regex("[_-]+"), " ").trim().ifBlank { "Untitled audio" }
                 val artist = item.optString("creator").ifBlank { doc.optString("creator") }
@@ -106,8 +106,8 @@ object InternetArchiveCatalog {
     private fun getJson(url: URL): JSONObject {
         val connection = (url.openConnection() as HttpURLConnection).apply {
             requestMethod = "GET"
-            connectTimeout = 10_000
-            readTimeout = 14_000
+            connectTimeout = 7_000
+            readTimeout = 9_000
             instanceFollowRedirects = true
             setRequestProperty("Accept", "application/json")
             setRequestProperty("User-Agent", "AETHRA-Android/1.5")
