@@ -1,62 +1,45 @@
-# AETHRA Launcher
+# AETHRA Music
 
-**Beyond the interface.**
+**AETHRA — Music Without Limits.**
 
-AETHRA is an independent Android launcher for phones and tablets. Its visual language, **AETHRA FORM**, uses a dark architectural canvas, warm paper surfaces, signal orange, and electric lime.
+AETHRA is an Android music player built around one simple idea: open the app and play. It combines music stored on the device with discovery from public, openly licensed audio catalogues.
 
-## First version — 0.1.0
+## Product principles
 
-The first development build includes:
+- No AETHRA account or sign-in.
+- No listener-supplied API keys or provider credentials.
+- Local music playback after the Android media permission is granted.
+- Open-catalogue discovery with source and licence information where available.
+- Background playback through AndroidX Media3.
+- A unified search experience for local tracks and the currently integrated open catalogue.
+- No AETHRA-inserted advertisements.
 
-- Android Home-app integration, so AETHRA can be selected as the default Home app.
-- Installed-app discovery using Android's launchable-activity query.
-- App launching from the home space and app field.
-- Live local clock and date.
-- Search by app label or package name.
-- Saved shortcuts: long-press an app to add or remove it from the home space.
-- Adaptive layouts for compact phones and wide tablet screens.
-- Safe-area handling for status bars, navigation bars, and display cutouts.
-- Local preferences only. No account, analytics SDK, or network permission is included.
+## Current online catalogue
 
-## Not included yet
+The current online source is the Internet Archive. AETHRA searches audio items that declare a Creative Commons licence and resolves playable MP3/Ogg files when available.
 
-Widgets, folders, icon packs, wallpaper selection, gesture customisation, notification badges, and backup/restore are not claimed as working features. They are candidates for later milestones after the core launcher is tested on real devices.
+This is an open catalogue, not a licensed substitute for Spotify, YouTube Music, Apple Music, or every commercial release. Search coverage, metadata, artwork, stream availability, and item-level rights vary. AETHRA does not bypass paywalls, access controls, or provider restrictions.
+
+## Android implementation
+
+- Kotlin
+- Jetpack Compose
+- AndroidX Media3 ExoPlayer and MediaSession
+- Internet Archive public metadata/search endpoints
+- Android MediaStore for local audio discovery
 
 ## Build
 
-The project uses Kotlin, Jetpack Compose, Android Gradle Plugin 9.5, and Gradle 9.8.2.
+GitHub Actions runs Android lint/resource verification and assembles a debug APK on pushes to `main`. Successful main-branch builds publish the APK to GitHub Releases.
 
-GitHub Actions builds a debug APK on pushes to `aethra-dev` and `main`. Open the repository's **Actions** tab, select **AETHRA Android Build**, open the latest successful run, and download the `aethra-debug-apk` artifact.
-
-The workflow intentionally uses a cloud Gradle installation, so a Gradle wrapper binary is not required in the repository.
-
-## Install and select AETHRA
-
-1. Download and extract the APK artifact.
-2. Install the APK on the Android device.
-3. Press the device's Home button or use the Home gesture.
-4. Select **AETHRA** in Android's Home-app chooser and choose it as the default.
-5. Open the app field to search and launch installed apps.
-
-The first build is a **debug/testing APK**, not a Play Store release. It is not signed with a permanent release key.
-
-## Development branches
-
-- `main` — stable project landing point.
-- `aethra-dev` — active implementation and testing.
-
-Keep day-to-day changes on `aethra-dev`. Promote a tested milestone to `main) only after it works on the target phone and tablet.
+The debug APK is for testing and is not a Play Store production-signed release.
 
 ## Package
 
 `com.aethra.launcher`
 
-This application ID is the project's initial package identity. Keep it unchanged after distributing builds unless you intentionally want Android to treat the app as a different application.
+The application ID is retained to preserve update compatibility with existing installations.
 
-## Brand
+## Roadmap
 
-- Product: AETHRA Launcher
-- Design language: AETHRA FORM
-- Tagline: Beyond the interface.
-
-The brand name and logo are working project assets; trademark, domain, and store-name clearance remain separate checks before a public commercial launch.
+The next engineering priorities are expanding legitimate open-catalogue coverage, strengthening playback and queue behaviour, adding persistent playlists and listening history, improving metadata/artwork reliability, and testing performance across low- and high-end Android devices. Features will only be marked complete after implementation and verification.
