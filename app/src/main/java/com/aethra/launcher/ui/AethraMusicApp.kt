@@ -1062,7 +1062,7 @@ private fun TrackRow(
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(track.title, color = colors.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
-                if (track.source == "INTERNET_ARCHIVE") track.artist + " · JAMENDO" else track.artist,
+                if (track.source == "INTERNET_ARCHIVE") track.artist + " · OPEN AUDIO" else track.artist,
                 color = colors.muted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
             )
         }
