@@ -120,7 +120,7 @@ private fun com.aethra.launcher.data.OnlineTrack.asAppTrack(): Track = Track(
 
 private enum class AethraTab { HOME, SEARCH, LIBRARY, SETTINGS }
 
-private val artworkCache = object : LruCache<String, Bitmap>(48) {})
+private val artworkCache = object : LruCache<String, Bitmap>(48) {}
 
 @Composable
 fun AethraMusicApp(controller: MediaController) {
