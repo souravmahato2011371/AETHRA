@@ -177,10 +177,10 @@ fun AethraSurfaceCard(
     val fill = if (colors.glass) {
         Brush.linearGradient(
             listOf(
-                Color.White.copy(alpha = 0.19f),
-                colors.surface.copy(alpha = 0.66f),
-                colors.raised.copy(alpha = 0.42f),
-                Color.White.copy(alpha = 0.10f)
+                Color.White.copy(alpha = 0.22f),
+                colors.surface.copy(alpha = 0.36f),
+                colors.raised.copy(alpha = 0.22f),
+                Color.White.copy(alpha = 0.08f)
             )
         )
     } else Brush.linearGradient(listOf(colors.surface, colors.surface))
@@ -193,7 +193,7 @@ fun AethraSurfaceCard(
             .then(
                 if (colors.glass) Modifier.drawBehind {
                     drawLine(
-                        Color.White.copy(alpha = 0.34f),
+                        Color.White.copy(alpha = 0.48f),
                         Offset(18.dp.toPx(), 1.dp.toPx()),
                         Offset(size.width - 18.dp.toPx(), 1.dp.toPx()),
                         1.dp.toPx()
