@@ -46,9 +46,13 @@ jobs:
           gradle-version: '9.8.2'
 
       - name: Verify Kotlin and Android resources
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
         run: gradle --no-daemon :app:lintDebug
 
       - name: Assemble debug APK
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
         run: gradle --no-daemon assembleDebug
 
       - name: Read app version
