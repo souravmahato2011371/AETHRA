@@ -313,6 +313,7 @@ fun AethraMusicApp(controller: MediaController) {
                 liked = liked,
                 onToggleLike = ::toggleLike,
                 currentTrack = currentTrack,
+                activeTrackKey = currentTrack?.stableKey,
                 currentTitle = currentTitle,
                 currentArtist = currentArtist,
                 isPlaying = isPlaying,
@@ -557,6 +558,7 @@ private fun AethraExperience(
     liked: Set<String>,
     onToggleLike: (Track) -> Unit,
     currentTrack: Track?,
+    activeTrackKey: String?,
     currentTitle: String,
     currentArtist: String,
     isPlaying: Boolean,
@@ -673,6 +675,7 @@ private fun AethraExperience(
                     AethraTab.HOME -> HomeScreen(
                         tracks = tracks,
                         onlineTracks = onlineTracks,
+                        activeTrackKey = activeTrackKey,
                         onlineLoading = onlineCatalogLoading,
                         onlineError = onlineCatalogError,
                         audioPermission = audioPermission,
@@ -687,6 +690,7 @@ private fun AethraExperience(
                         onQueryChange = onQueryChange,
                         tracks = visibleTracks,
                         onlineTracks = onlineTracks,
+                        activeTrackKey = activeTrackKey,
                         onOnlineResults = onOnlineResults,
                         liked = liked,
                         onPlayTrack = onPlayTrack,
@@ -694,6 +698,7 @@ private fun AethraExperience(
                     )
                     AethraTab.LIBRARY -> LibraryScreen(
                         tracks = visibleTracks,
+                        activeTrackKey = activeTrackKey,
                         likedCount = liked.size,
                         onPlayTrack = onPlayTrack,
                         onToggleLike = onToggleLike
@@ -738,6 +743,7 @@ private fun AethraExperience(
 private fun HomeScreen(
     tracks: List<Track>,
     onlineTracks: List<Track>,
+    activeTrackKey: String?,
     onlineLoading: Boolean,
     onlineError: String,
     audioPermission: Boolean,
@@ -830,6 +836,7 @@ private fun SearchScreen(
     onQueryChange: (String) -> Unit,
     tracks: List<Track>,
     onlineTracks: List<Track>,
+    activeTrackKey: String?,
     onOnlineResults: (List<Track>) -> Unit,
     liked: Set<String>,
     onPlayTrack: (Track) -> Unit,
@@ -937,6 +944,7 @@ private fun SearchScreen(
 @Composable
 private fun LibraryScreen(
     tracks: List<Track>,
+    activeTrackKey: String?,
     likedCount: Int,
     onPlayTrack: (Track) -> Unit,
     onToggleLike: (Track) -> Unit
