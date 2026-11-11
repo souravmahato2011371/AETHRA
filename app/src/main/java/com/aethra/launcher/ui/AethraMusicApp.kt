@@ -10,6 +10,8 @@ import android.media.MediaMetadataRetriever
 import android.os.Build
 import android.provider.MediaStore
 import android.util.LruCache
+import java.net.HttpURLConnection
+import java.net.URL
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
@@ -81,6 +83,7 @@ import androidx.core.content.ContextCompat
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import com.aethra.launcher.data.JamendoCatalog
 import androidx.media3.session.MediaController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -93,12 +96,31 @@ private data class Track(
     val artist: String,
     val album: String,
     val duration: Long,
-    val uri: android.net.Uri
+    val uri: android.net.Uri,
+    val source: String = "LOCAL",
+    val artworkUrl: String? = null,
+    val shareUrl: String? = null,
+    val licenseUrl: String? = null
+) {
+    val stableKey: String get() = "$source:$id"
+}
+
+private fun com.aethra.launcher.data.OnlineTrack.asAppTrack(): Track = Track(
+    id = id.toLongOrNull() ?: id.hashCode().toLong(),
+    title = title,
+    artist = artist,
+    album = album,
+    duration = durationSeconds * 1000L,
+    uri = android.net.Uri.parse(streamUrl),
+    source = "JAMENDO",
+    artworkUrl = artworkUrl,
+    shareUrl = shareUrl,
+    licenseUrl = licenseUrl
 )
 
 private enum class AethraTab { HOME, SEARCH, LIBRARY, SETTINGS }
 
-private val artworkCache = object : LruCache<Long, Bitmap>(48) {}
+private val artworkCache = object : LruCache<String, Bitmap>(48) {})
 
 @Composable
 fun AethraMusicApp(controller: MediaController) {
@@ -122,6 +144,10 @@ fun AethraMusicApp(controller: MediaController) {
         mutableStateOf(ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED)
     }
     var tracks by remember { mutableStateOf(emptyList<Track>()) }
+    var onlineTracks by remember { mutableStateOf(emptyList<Track>()) }
+    var jamendoClientId by remember {
+        mutableStateOf(prefs.getString("jamendo_client_id", "").orEmpty())
+    }
     var activeTab by remember { mutableStateOf(AethraTab.HOME) }
     var query by remember { mutableStateOf("") }
     var liked by remember {
@@ -167,12 +193,12 @@ fun AethraMusicApp(controller: MediaController) {
         }
     }
 
-    DisposableEffect(controller, tracks) {
+    DisposableEffect(controller, tracks, onlineTracks) {
         val listener = object : androidx.media3.common.Player.Listener {
             override fun onMediaItemTransition(item: MediaItem?, reason: Int) {
                 currentTitle = item?.mediaMetadata?.title?.toString().orEmpty()
                 currentArtist = item?.mediaMetadata?.artist?.toString().orEmpty()
-                currentTrack = tracks.firstOrNull { it.id.toString() == item?.mediaId }
+                currentTrack = (tracks + onlineTracks).firstOrNull { it.stableKey == item?.mediaId }
             }
 
             override fun onIsPlayingChanged(isNowPlaying: Boolean) {
@@ -198,8 +224,9 @@ fun AethraMusicApp(controller: MediaController) {
     }
 
     fun playTrack(track: Track) {
-        val playlist = tracks.map { it.asMediaItem() }
-        val index = tracks.indexOfFirst { it.id == track.id }.coerceAtLeast(0)
+        val queue = if (track.source == "JAMENDO") onlineTracks else tracks
+        val playlist = queue.map { it.asMediaItem() }
+        val index = queue.indexOfFirst { it.stableKey == track.stableKey }.coerceAtLeast(0)
         controller.setMediaItems(playlist, index, 0L)
         controller.prepare()
         controller.play()
@@ -222,8 +249,10 @@ fun AethraMusicApp(controller: MediaController) {
     }
 
     fun toggleLike(track: Track) {
-        val key = track.id.toString()
-        val next = if (liked.contains(key)) liked - key else liked + key
+        val key = track.stableKey
+        val oldKey = track.id.toString()
+        val alreadyLiked = liked.contains(key) || (track.source == "LOCAL" && liked.contains(oldKey))
+        val next = if (alreadyLiked) liked - key - oldKey else liked + key
         liked = next
         prefs.edit().putStringSet("liked", next).apply()
     }
@@ -241,6 +270,13 @@ fun AethraMusicApp(controller: MediaController) {
             AethraExperience(
                 controller = controller,
                 tracks = tracks,
+                onlineTracks = onlineTracks,
+                onOnlineResults = { onlineTracks = it },
+                jamendoClientId = jamendoClientId,
+                onJamendoClientIdChange = { value ->
+                    jamendoClientId = value
+                    prefs.edit().putString("jamendo_client_id", value).apply()
+                },
                 audioPermission = audioPermission,
                 requestAudioPermission = { permissionRequest.launch(permission) },
                 activeTab = activeTab,
@@ -472,6 +508,10 @@ private fun StyleChoice(
 private fun AethraExperience(
     controller: MediaController,
     tracks: List<Track>,
+    onlineTracks: List<Track>,
+    onOnlineResults: (List<Track>) -> Unit,
+    jamendoClientId: String,
+    onJamendoClientIdChange: (String) -> Unit,
     audioPermission: Boolean,
     requestAudioPermission: () -> Unit,
     activeTab: AethraTab,
@@ -506,7 +546,9 @@ private fun AethraExperience(
         AethraTab.SEARCH -> tracks.filter {
             it.title.contains(query, true) || it.artist.contains(query, true) || it.album.contains(query, true)
         }
-        AethraTab.LIBRARY -> tracks.filter { liked.contains(it.id.toString()) }
+        AethraTab.LIBRARY -> (tracks + onlineTracks).filter {
+            liked.contains(it.stableKey) || (it.source == "LOCAL" && liked.contains(it.id.toString()))
+        }
         AethraTab.SETTINGS -> emptyList()
     }
 
@@ -580,6 +622,9 @@ private fun AethraExperience(
                         query = query,
                         onQueryChange = onQueryChange,
                         tracks = visibleTracks,
+                        onlineTracks = onlineTracks,
+                        onOnlineResults = onOnlineResults,
+                        jamendoClientId = jamendoClientId,
                         liked = liked,
                         onPlayTrack = onPlayTrack,
                         onToggleLike = onToggleLike
@@ -593,6 +638,8 @@ private fun AethraExperience(
                     AethraTab.SETTINGS -> SettingsScreen(
                         mode = mode,
                         style = style,
+                        jamendoClientId = jamendoClientId,
+                        onJamendoClientIdChange = onJamendoClientIdChange,
                         onModeChange = onModeChange,
                         onStyleChange = onStyleChange
                     )
@@ -695,24 +742,52 @@ private fun SearchScreen(
     query: String,
     onQueryChange: (String) -> Unit,
     tracks: List<Track>,
+    onlineTracks: List<Track>,
+    onOnlineResults: (List<Track>) -> Unit,
+    jamendoClientId: String,
     liked: Set<String>,
     onPlayTrack: (Track) -> Unit,
     onToggleLike: (Track) -> Unit
 ) {
     val colors = LocalAethraColors.current
-    Column(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 20.dp)) {
-        Text("Search", color = colors.text, style = MaterialTheme.typography.headlineLarge, fontSize = 32.sp)
-        Spacer(Modifier.height(7.dp))
-        Text("Search your available music library.", color = colors.muted, fontSize = 13.sp)
-        Spacer(Modifier.height(18.dp))
+    val scope = rememberCoroutineScope()
+    var loading by remember { mutableStateOf(false) }
+    var onlineError by remember { mutableStateOf("") }
+    var hasSearched by remember { mutableStateOf(false) }
+
+    fun searchOnline(term: String) {
+        scope.launch {
+            loading = true
+            onlineError = ""
+            try {
+                onOnlineResults(JamendoCatalog.search(jamendoClientId, term).map { it.asAppTrack() })
+                hasSearched = true
+            } catch (error: Exception) {
+                onlineError = error.message ?: "Could not reach the online music catalogue."
+            } finally {
+                loading = false
+            }
+        }
+    }
+
+    LaunchedEffect(jamendoClientId) {
+        if (jamendoClientId.isNotBlank() && !hasSearched && onlineTracks.isEmpty()) searchOnline("")
+    }
+
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Text("Discover", color = colors.text, style = MaterialTheme.typography.headlineLarge, fontSize = 34.sp)
+        Text("Explore public independent music. No listener account is required.", color = colors.muted, fontSize = 13.sp, lineHeight = 19.sp)
         OutlinedTextField(
             value = query,
             onValueChange = onQueryChange,
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            placeholder = { Text("Songs, artists, albums", color = colors.muted) },
+            placeholder = { Text("Track, artist, album or genre", color = colors.muted) },
             leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null, tint = colors.muted) },
-            shape = RoundedCornerShape(if (colors.glass) 24.dp else 16.dp),
+            shape = RoundedCornerShape(if (colors.sharp) 3.dp else if (colors.glass) 24.dp else 16.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = colors.text,
                 unfocusedTextColor = colors.text,
@@ -723,22 +798,48 @@ private fun SearchScreen(
                 unfocusedContainerColor = colors.surface
             )
         )
-        Spacer(Modifier.height(16.dp))
-        SectionHeading("RESULTS", tracks.size.toString() + " TRACKS")
-        if (tracks.isEmpty()) {
-            EmptyState(
-                title = if (query.isBlank()) "YOUR SEARCH STARTS HERE" else "NO MATCHES FOUND",
-                message = if (query.isBlank()) "Try an artist, album or song already in your device library." else "Try a different spelling or search term."
-            )
-        } else {
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(bottom = 18.dp),
-                verticalArrangement = Arrangement.spacedBy(7.dp)
-            ) {
-                items(tracks, key = { it.id }) { track ->
-                    TrackRow(track, liked.contains(track.id.toString()), { onPlayTrack(track) }, { onToggleLike(track) })
+        Button(
+            onClick = { searchOnline(query) },
+            enabled = !loading,
+            modifier = Modifier.fillMaxWidth().height(50.dp),
+            shape = RoundedCornerShape(if (colors.sharp) 3.dp else 16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = colors.accent, contentColor = if (colors.sharp) Color.White else colors.background)
+        ) {
+            if (loading) {
+                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = if (colors.sharp) Color.White else colors.background)
+                Spacer(Modifier.width(10.dp))
+                Text("SEARCHING JAMENDO…")
+            } else Text("SEARCH ONLINE CATALOGUE", fontWeight = FontWeight.ExtraBold, letterSpacing = 0.7.sp)
+        }
+        if (onlineError.isNotBlank()) {
+            AethraCard(Modifier.fillMaxWidth()) {
+                Text(onlineError, modifier = Modifier.padding(16.dp), color = colors.accentSecondary, fontSize = 12.sp, lineHeight = 18.sp)
+            }
+        } else if (jamendoClientId.isBlank()) {
+            AethraCard(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("CONNECT THE ONLINE CATALOGUE", color = colors.accent, fontWeight = FontWeight.ExtraBold, fontSize = 11.sp)
+                    Text("Add your Jamendo developer client ID in Settings. Listeners do not need Jamendo accounts.", color = colors.text, fontSize = 12.sp, lineHeight = 18.sp)
                 }
+            }
+        } else Text("JAMENDO · PUBLIC MUSIC STREAMS", color = colors.muted, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+
+        if (onlineTracks.isNotEmpty()) {
+            SectionHeading("ONLINE · JAMENDO", onlineTracks.size.toString() + " TRACKS")
+            onlineTracks.take(24).forEach { track ->
+                TrackRow(track, liked.contains(track.stableKey), { onPlayTrack(track) }, { onToggleLike(track) })
+            }
+            Text("Streams and artwork are provided by Jamendo. Check each track's licence and attribution terms before reuse.", color = colors.muted, fontSize = 10.sp, lineHeight = 15.sp)
+        } else if (hasSearched && !loading && onlineError.isBlank()) {
+            EmptyState("NO ONLINE MATCHES", "Try another track, artist or genre.")
+        }
+
+        SectionHeading("ON THIS DEVICE", tracks.size.toString() + " TRACKS")
+        if (tracks.isEmpty()) {
+            Text("No local matches. Online results appear above.", color = colors.muted, fontSize = 12.sp)
+        } else {
+            tracks.take(18).forEach { track ->
+                TrackRow(track, liked.contains(track.stableKey) || liked.contains(track.id.toString()), { onPlayTrack(track) }, { onToggleLike(track) })
             }
         }
     }
@@ -785,10 +886,13 @@ private fun LibraryScreen(
 private fun SettingsScreen(
     mode: ThemeMode,
     style: VisualStyle,
+    jamendoClientId: String,
+    onJamendoClientIdChange: (String) -> Unit,
     onModeChange: (ThemeMode) -> Unit,
     onStyleChange: (VisualStyle) -> Unit
 ) {
     val colors = LocalAethraColors.current
+    val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -812,6 +916,27 @@ private fun SettingsScreen(
                 icon = { Icon(Icons.Rounded.DarkMode, contentDescription = null) }
             )
         }
+        SetupSectionTitle("ONLINE MUSIC", "Connect AETHRA to public music streaming")
+        OutlinedTextField(
+            value = jamendoClientId,
+            onValueChange = onJamendoClientIdChange,
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            label = { Text("Jamendo developer client ID") },
+            placeholder = { Text("Paste your client ID") },
+            shape = RoundedCornerShape(if (colors.sharp) 3.dp else 16.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = colors.text,
+                unfocusedTextColor = colors.text,
+                cursorColor = colors.accent,
+                focusedBorderColor = colors.accent,
+                unfocusedBorderColor = colors.outline
+            )
+        )
+        Text("Create a read-only API app in the Jamendo developer portal. This key is used to search and stream the public catalogue; listeners do not need Jamendo accounts.", color = colors.muted, fontSize = 11.sp, lineHeight = 17.sp)
+        TextButton(onClick = { uriHandler.openUri("https://devportal.jamendo.com/") }) {
+            Text("OPEN JAMENDO DEVELOPER PORTAL")
+        }
         SetupSectionTitle("DESIGN LANGUAGE", "Change the complete visual character")
         VisualStyle.entries.forEach { option ->
             StyleChoice(option, style == option) { onStyleChange(option) }
@@ -820,7 +945,7 @@ private fun SettingsScreen(
             Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("ABOUT AETHRA", color = colors.accent, fontWeight = FontWeight.ExtraBold, fontSize = 11.sp, letterSpacing = 1.3.sp)
                 Text("AETHRA is account-free by default. The core player does not insert advertisements. Third-party music catalogues, licensing and playback rules remain separate from AETHRA.", color = colors.text, fontSize = 12.sp, lineHeight = 18.sp)
-                Text("VERSION 1.1 · LOCAL PLAYBACK FOUNDATION", color = colors.muted, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Text("VERSION 1.2 · LOCAL + ONLINE STREAMING", color = colors.muted, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             }
         }
     }
@@ -975,7 +1100,10 @@ private fun TrackRow(
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(track.title, color = colors.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(track.artist, color = colors.muted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                if (track.source == "JAMENDO") track.artist + " · JAMENDO" else track.artist,
+                color = colors.muted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
+            )
         }
         Text(formatTime(track.duration), color = colors.muted, fontSize = 10.sp)
         IconButton(onClick = onLike) {
@@ -991,10 +1119,14 @@ private fun TrackRow(
 @Composable
 private fun TrackArtwork(track: Track?, title: String, modifier: Modifier = Modifier) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val bitmap by produceState<Bitmap?>(initialValue = track?.let { artworkCache.get(it.id) }, key1 = track?.id) {
+    val bitmap by produceState<Bitmap?>(initialValue = track?.let { artworkCache.get(it.stableKey) }, key1 = track?.stableKey) {
         if (track != null && value == null) {
             value = withContext(Dispatchers.IO) {
-                artworkCache.get(track.id) ?: extractArtwork(context, track)?.also { artworkCache.put(track.id, it) }
+                artworkCache.get(track.stableKey) ?: run {
+                    val remote = track.artworkUrl?.let(::downloadArtwork)
+                    (remote ?: if (track.source == "LOCAL") extractArtwork(context, track) else null)
+                        ?.also { artworkCache.put(track.stableKey, it) }
+                }
             }
         }
     }
@@ -1024,6 +1156,23 @@ private fun TrackArtwork(track: Track?, title: String, modifier: Modifier = Modi
                 fontWeight = FontWeight.Black
             )
         }
+    }
+}
+
+private fun downloadArtwork(url: String): Bitmap? {
+    val connection = (URL(url).openConnection() as HttpURLConnection).apply {
+        connectTimeout = 12_000
+        readTimeout = 15_000
+        instanceFollowRedirects = true
+    }
+    return try {
+        if (connection.responseCode in 200..299) {
+            connection.inputStream.use { BitmapFactory.decodeStream(it) }
+        } else null
+    } catch (_: Exception) {
+        null
+    } finally {
+        connection.disconnect()
     }
 }
 
@@ -1176,7 +1325,7 @@ private fun readTracks(context: Context): List<Track> {
 }
 
 private fun Track.asMediaItem(): MediaItem = MediaItem.Builder()
-    .setMediaId(id.toString())
+    .setMediaId(stableKey)
     .setUri(uri)
     .setMediaMetadata(
         MediaMetadata.Builder()
