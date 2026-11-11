@@ -133,7 +133,7 @@ fun AethraMusicApp(controller: MediaController) {
     var visualStyle by remember {
         mutableStateOf(readVisualStyle(prefs.getString("visual_style", null)))
     }
-    var setupComplete by remember { mutableStateOf(prefs.getBoolean("setup_complete", false)) }
+    var setupComplete by remember { mutableStateOf(true) }
 
     val permission = if (Build.VERSION.SDK_INT >= 33) {
         Manifest.permission.READ_MEDIA_AUDIO
