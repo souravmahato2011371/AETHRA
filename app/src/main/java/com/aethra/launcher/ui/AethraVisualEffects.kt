@@ -1,5 +1,10 @@
 package com.aethra.launcher.ui
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -11,20 +16,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
@@ -35,15 +35,11 @@ fun AethraVisualBackdrop(
     colors: AethraColors,
     content: @Composable () -> Unit
 ) {
-    Box(
-        Modifier
-            .fillMaxSize()
-            .background(colors.background)
-    ) {
+    Box(Modifier.fillMaxSize().background(colors.background)) {
         when (style) {
             VisualStyle.LIQUID_GLASS -> GlassAtmosphere()
             VisualStyle.NEO_CONSTRUCTIVIST_POP -> NcpGridBackdrop(colors)
-            VisualStyle.SIGNATURE_PREMIUM -> Unit
+            VisualStyle.SIGNATURE_PREMIUM -> PremiumAtmosphere()
         }
         content()
     }
@@ -67,9 +63,25 @@ private fun NcpGridBackdrop(colors: AethraColors) {
     }
 }
 
+@Composable
+private fun PremiumAtmosphere() {
+    Canvas(Modifier.fillMaxSize()) {
+        drawCircle(
+            Brush.radialGradient(
+                listOf(Color(0xFFD8BD83).copy(alpha = 0.11f), Color.Transparent),
+                center = Offset(size.width * 0.82f, size.height * 0.12f),
+                radius = size.width * 0.8f
+            ),
+            radius = size.width * 0.8f,
+            center = Offset(size.width * 0.82f, size.height * 0.12f)
+        )
+    }
+}
+
 /**
- * Glass atmosphere is intentionally shader-free: broad radial gradients create
- * the depth of a lit glass environment without a full-screen blur render pass.
+ * A low-cost glass environment: animated light fields and layered highlights.
+ * It deliberately avoids backdrop-capture and full-screen blur passes so the
+ * interface remains predictable on entry-level GPUs.
  */
 @Composable
 private fun GlassAtmosphere() {
@@ -77,32 +89,41 @@ private fun GlassAtmosphere() {
     val phase by transition.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(14000), repeatMode = RepeatMode.Reverse),
+        animationSpec = infiniteRepeatable(tween(18000), repeatMode = RepeatMode.Reverse),
         label = "glass-phase"
     )
     Canvas(Modifier.fillMaxSize()) {
         val w = size.width
         val h = size.height
-        val first = Offset(w * (0.12f + phase * 0.18f), h * 0.20f)
-        val second = Offset(w * (0.86f - phase * 0.14f), h * 0.62f)
-        drawRect(Color(0xFF0A142A))
+        val first = Offset(w * (0.08f + phase * 0.24f), h * (0.16f + phase * 0.08f))
+        val second = Offset(w * (0.90f - phase * 0.22f), h * (0.64f - phase * 0.10f))
+        val third = Offset(w * (0.52f + phase * 0.10f), h * 0.98f)
+        drawRect(Color(0xFF071326))
         drawCircle(
             Brush.radialGradient(
-                listOf(Color(0xFF8CB7FF).copy(alpha = 0.34f), Color(0xFF526FC0).copy(alpha = 0.12f), Color.Transparent),
+                listOf(Color(0xFF9FC5FF).copy(alpha = 0.42f), Color(0xFF5479C7).copy(alpha = 0.16f), Color.Transparent),
                 center = first,
-                radius = w * 0.62f
-            ),
-            radius = w * 0.62f,
-            center = first
+                radius = w * 0.70f
+            ), w * 0.70f, first
         )
         drawCircle(
             Brush.radialGradient(
-                listOf(Color(0xFF65DDE0).copy(alpha = 0.25f), Color(0xFF3F75AA).copy(alpha = 0.09f), Color.Transparent),
+                listOf(Color(0xFF65E2E0).copy(alpha = 0.29f), Color(0xFF3F75AA).copy(alpha = 0.10f), Color.Transparent),
                 center = second,
-                radius = w * 0.54f
-            ),
-            radius = w * 0.54f,
-            center = second
+                radius = w * 0.58f
+            ), w * 0.58f, second
+        )
+        drawCircle(
+            Brush.radialGradient(
+                listOf(Color(0xFF9C8BFF).copy(alpha = 0.16f), Color.Transparent),
+                center = third,
+                radius = w * 0.48f
+            ), w * 0.48f, third
+        )
+        drawRect(
+            Brush.verticalGradient(
+                listOf(Color.White.copy(alpha = 0.035f), Color.Transparent, Color.Black.copy(alpha = 0.18f))
+            )
         )
     }
 }
@@ -113,41 +134,49 @@ fun AethraLiquidLens() {
     val pulse by transition.animateFloat(
         initialValue = 0.985f,
         targetValue = 1.015f,
-        animationSpec = infiniteRepeatable(tween(4200), repeatMode = RepeatMode.Reverse),
+        animationSpec = infiniteRepeatable(tween(5200), repeatMode = RepeatMode.Reverse),
         label = "lens-pulse"
     )
+    val sweep by transition.animateFloat(
+        initialValue = -0.45f,
+        targetValue = 1.35f,
+        animationSpec = infiniteRepeatable(tween(6400), repeatMode = RepeatMode.Restart),
+        label = "lens-sweep"
+    )
     Box(
-        Modifier
-            .size(112.dp)
+        Modifier.size(112.dp)
             .graphicsLayer { scaleX = pulse; scaleY = pulse }
             .clip(CircleShape)
             .background(
-                Brush.radialGradient(
-                    listOf(
-                        Color.White.copy(alpha = 0.58f),
-                        Color(0xFFB8E9FF).copy(alpha = 0.30f),
-                        Color(0xFF79DDEB).copy(alpha = 0.18f),
-                        Color(0xFF4564A9).copy(alpha = 0.24f)
-                    )
+                Brush.linearGradient(
+                    listOf(Color.White.copy(alpha = 0.62f), Color(0xFFB8E9FF).copy(alpha = 0.30f),
+                        Color(0xFF79DDEB).copy(alpha = 0.18f), Color(0xFF4564A9).copy(alpha = 0.28f))
                 )
             )
-            .border(1.dp, Color.White.copy(alpha = 0.76f), CircleShape)
+            .border(1.dp, Color.White.copy(alpha = 0.78f), CircleShape)
             .drawBehind {
                 drawCircle(
                     Brush.linearGradient(
-                        listOf(Color.White.copy(alpha = 0.48f), Color.Transparent),
-                        start = Offset(size.width * 0.12f, size.height * 0.08f),
-                        end = Offset(size.width * 0.88f, size.height * 0.72f)
+                        listOf(Color.White.copy(alpha = 0.54f), Color.Transparent),
+                        start = Offset(size.width * 0.08f, size.height * 0.05f),
+                        end = Offset(size.width * 0.92f, size.height * 0.82f)
                     ),
                     radius = size.minDimension * 0.48f,
                     center = Offset(size.width * 0.5f, size.height * 0.5f),
                     style = Stroke(width = 1.2.dp.toPx())
                 )
-                drawCircle(
-                    Color.White.copy(alpha = 0.66f),
-                    radius = size.minDimension * 0.105f,
-                    center = Offset(size.width * 0.31f, size.height * 0.26f)
+                val x = size.width * sweep
+                drawOval(
+                    Brush.linearGradient(
+                        listOf(Color.Transparent, Color.White.copy(alpha = 0.30f), Color.Transparent),
+                        start = Offset(x - size.width * 0.28f, 0f),
+                        end = Offset(x + size.width * 0.28f, size.height)
+                    ),
+                    topLeft = Offset(0f, 0f),
+                    size = size
                 )
+                drawCircle(Color.White.copy(alpha = 0.70f), size.minDimension * 0.09f,
+                    Offset(size.width * 0.30f, size.height * 0.24f))
             },
         contentAlignment = Alignment.Center
     ) {}
@@ -162,7 +191,7 @@ fun AethraSurfaceCard(
     val shape = RoundedCornerShape(
         when {
             colors.sharp -> 2.dp
-            colors.glass -> 24.dp
+            colors.glass -> 25.dp
             else -> 18.dp
         }
     )
@@ -176,31 +205,49 @@ fun AethraSurfaceCard(
     } else Modifier
     val fill = if (colors.glass) {
         Brush.linearGradient(
-            listOf(
-                Color.White.copy(alpha = 0.22f),
-                colors.surface.copy(alpha = 0.36f),
-                colors.raised.copy(alpha = 0.22f),
-                Color.White.copy(alpha = 0.08f)
-            )
+            0f to Color.White.copy(alpha = 0.25f),
+            0.22f to colors.surface.copy(alpha = 0.42f),
+            0.58f to colors.raised.copy(alpha = 0.27f),
+            1f to Color(0xFF9FCBFF).copy(alpha = 0.10f)
         )
     } else Brush.linearGradient(listOf(colors.surface, colors.surface))
 
     Column(
-        modifier
-            .then(hardShadow)
-            .clip(shape)
-            .background(fill)
-            .then(
-                if (colors.glass) Modifier.drawBehind {
-                    drawLine(
-                        Color.White.copy(alpha = 0.48f),
-                        Offset(18.dp.toPx(), 1.dp.toPx()),
-                        Offset(size.width - 18.dp.toPx(), 1.dp.toPx()),
-                        1.dp.toPx()
-                    )
-                } else Modifier
-            )
-            .border(if (colors.sharp) 2.dp else 1.dp, colors.outline.copy(alpha = 0.88f), shape),
+        modifier.then(hardShadow).clip(shape).background(fill)
+            .then(if (colors.glass) Modifier.drawBehind {
+                val stroke = 1.dp.toPx()
+                drawRoundRect(
+                    Brush.linearGradient(
+                        listOf(Color.White.copy(alpha = 0.68f), Color.White.copy(alpha = 0.10f),
+                            Color(0xFF9CCBFF).copy(alpha = 0.30f), Color.White.copy(alpha = 0.24f))
+                    ),
+                    style = Stroke(stroke),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(25.dp.toPx())
+                )
+                drawLine(
+                    Color.White.copy(alpha = 0.52f),
+                    Offset(20.dp.toPx(), stroke),
+                    Offset(size.width - 20.dp.toPx(), stroke),
+                    stroke
+                )
+                drawLine(
+                    Color.White.copy(alpha = 0.12f),
+                    Offset(18.dp.toPx(), size.height - stroke),
+                    Offset(size.width - 18.dp.toPx(), size.height - stroke),
+                    stroke
+                )
+                drawCircle(
+                    Brush.radialGradient(
+                        listOf(Color.White.copy(alpha = 0.12f), Color.Transparent),
+                        center = Offset(size.width * 0.12f, 0f),
+                        radius = size.width * 0.62f
+                    ),
+                    radius = size.width * 0.62f,
+                    center = Offset(size.width * 0.12f, 0f)
+                )
+            } else Modifier)
+            .border(if (colors.sharp) 2.dp else 1.dp,
+                if (colors.glass) Color.White.copy(alpha = 0.34f) else colors.outline.copy(alpha = 0.88f), shape),
         content = content
     )
 }
