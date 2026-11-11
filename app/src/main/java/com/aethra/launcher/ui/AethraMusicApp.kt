@@ -112,7 +112,7 @@ private fun com.aethra.launcher.data.OnlineTrack.asAppTrack(): Track = Track(
     album = album,
     duration = durationSeconds * 1000L,
     uri = android.net.Uri.parse(streamUrl),
-    source = "JAMENDO",
+    source = "INTERNET_ARCHIVE",
     artworkUrl = artworkUrl,
     shareUrl = shareUrl,
     licenseUrl = licenseUrl
@@ -221,7 +221,7 @@ fun AethraMusicApp(controller: MediaController) {
     }
 
     fun playTrack(track: Track) {
-        val queue = if (track.source == "JAMENDO") onlineTracks else tracks
+        val queue = if (track.source == "INTERNET_ARCHIVE") onlineTracks else tracks
         val playlist = queue.map { it.asMediaItem() }
         val index = queue.indexOfFirst { it.stableKey == track.stableKey }.coerceAtLeast(0)
         controller.setMediaItems(playlist, index, 0L)
@@ -1062,7 +1062,7 @@ private fun TrackRow(
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(track.title, color = colors.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
-                if (track.source == "JAMENDO") track.artist + " · JAMENDO" else track.artist,
+                if (track.source == "INTERNET_ARCHIVE") track.artist + " · JAMENDO" else track.artist,
                 color = colors.muted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
             )
         }
