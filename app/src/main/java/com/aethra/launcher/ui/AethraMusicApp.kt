@@ -98,7 +98,6 @@ import androidx.core.content.ContextCompat
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
-import com.aethra.launcher.data.YouTubeDataCatalog
 import androidx.media3.session.MediaController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -119,19 +118,6 @@ private data class Track(
 ) {
     val stableKey: String get() = "$source:$id"
 }
-
-private fun com.aethra.launcher.data.OnlineTrack.asAppTrack(): Track = Track(
-    id = id.toLongOrNull() ?: id.hashCode().toLong(),
-    title = title,
-    artist = artist,
-    album = album,
-    duration = durationSeconds * 1000L,
-    uri = android.net.Uri.parse(watchUrl),
-    source = "YOUTUBE_VIDEO",
-    artworkUrl = artworkUrl,
-    shareUrl = shareUrl,
-    licenseUrl = licenseUrl
-)
 
 private enum class AethraTab { HOME, SEARCH, LIBRARY, SETTINGS }
 
@@ -159,9 +145,6 @@ fun AethraMusicApp(controller: MediaController) {
         mutableStateOf(ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED)
     }
     var tracks by remember { mutableStateOf(emptyList<Track>()) }
-    var onlineTracks by remember { mutableStateOf(emptyList<Track>()) }
-    var onlineCatalogLoading by remember { mutableStateOf(false) }
-    var onlineCatalogError by remember { mutableStateOf("") }
     var playbackQueue by remember { mutableStateOf(emptyList<Track>()) }
     var queueIndex by remember { mutableIntStateOf(-1) }
     var activeTab by remember { mutableStateOf(AethraTab.HOME) }
@@ -209,18 +192,6 @@ fun AethraMusicApp(controller: MediaController) {
         }
     }
 
-    LaunchedEffect(Unit) {
-        onlineCatalogLoading = true
-        try {
-            onlineTracks = YouTubeDataCatalog.search("").map { it.asAppTrack() }
-            onlineCatalogError = ""
-        } catch (error: Exception) {
-            onlineCatalogError = error.message ?: "Online discovery is temporarily unavailable."
-        } finally {
-            onlineCatalogLoading = false
-        }
-    }
-
     DisposableEffect(controller, tracks, onlineTracks, playbackQueue) {
         val listener = object : androidx.media3.common.Player.Listener {
             override fun onMediaItemTransition(item: MediaItem?, reason: Int) {
@@ -228,7 +199,7 @@ fun AethraMusicApp(controller: MediaController) {
                 currentArtist = item?.mediaMetadata?.artist?.toString().orEmpty()
                 queueIndex = controller.currentMediaItemIndex
                 currentTrack = playbackQueue.firstOrNull { it.stableKey == item?.mediaId }
-                    ?: (tracks + onlineTracks).firstOrNull { it.stableKey == item?.mediaId }
+                    ?: tracks.firstOrNull { it.stableKey == item?.mediaId }
             }
 
             override fun onIsPlayingChanged(isNowPlaying: Boolean) {
@@ -254,11 +225,6 @@ fun AethraMusicApp(controller: MediaController) {
     }
 
     fun playTrack(track: Track) {
-        if (track.source == "YOUTUBE_VIDEO") {
-            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, track.uri)
-            runCatching { context.startActivity(intent) }
-            return
-        }
         val queue = tracks.distinctBy { it.stableKey }
         val selectedQueue = if (queue.any { it.stableKey == track.stableKey }) queue else listOf(track)
         val index = selectedQueue.indexOfFirst { it.stableKey == track.stableKey }.coerceAtLeast(0)
@@ -309,10 +275,6 @@ fun AethraMusicApp(controller: MediaController) {
             AethraExperience(
                 controller = controller,
                 tracks = tracks,
-                onlineTracks = onlineTracks,
-                onOnlineResults = { onlineTracks = it },
-                onlineCatalogLoading = onlineCatalogLoading,
-                onlineCatalogError = onlineCatalogError,
                 audioPermission = audioPermission,
                 requestAudioPermission = { permissionRequest.launch(permission) },
                 activeTab = activeTab,
@@ -554,10 +516,6 @@ private fun StyleChoice(
 private fun AethraExperience(
     controller: MediaController,
     tracks: List<Track>,
-    onlineTracks: List<Track>,
-    onOnlineResults: (List<Track>) -> Unit,
-    onlineCatalogLoading: Boolean,
-    onlineCatalogError: String,
     audioPermission: Boolean,
     requestAudioPermission: () -> Unit,
     activeTab: AethraTab,
@@ -597,7 +555,7 @@ private fun AethraExperience(
         AethraTab.SEARCH -> tracks.filter {
             it.title.contains(query, true) || it.artist.contains(query, true) || it.album.contains(query, true)
         }
-        AethraTab.LIBRARY -> (tracks + onlineTracks).filter {
+        AethraTab.LIBRARY -> tracks.filter {
             liked.contains(it.stableKey) || (it.source == "LOCAL" && liked.contains(it.id.toString()))
         }
         AethraTab.SETTINGS -> emptyList()
@@ -675,10 +633,7 @@ private fun AethraExperience(
                 when (page) {
                     AethraTab.HOME -> HomeScreen(
                         tracks = tracks,
-                        onlineTracks = onlineTracks,
                         activeTrackKey = activeTrackKey,
-                        onlineLoading = onlineCatalogLoading,
-                        onlineError = onlineCatalogError,
                         audioPermission = audioPermission,
                         requestAudioPermission = requestAudioPermission,
                         liked = liked,
@@ -690,9 +645,7 @@ private fun AethraExperience(
                         query = query,
                         onQueryChange = onQueryChange,
                         tracks = visibleTracks,
-                        onlineTracks = onlineTracks,
                         activeTrackKey = activeTrackKey,
-                        onOnlineResults = onOnlineResults,
                         liked = liked,
                         onPlayTrack = onPlayTrack,
                         onToggleLike = onToggleLike
@@ -796,10 +749,7 @@ private fun RowScope.NavigationDockItem(
 @Composable
 private fun HomeScreen(
     tracks: List<Track>,
-    onlineTracks: List<Track>,
     activeTrackKey: String?,
-    onlineLoading: Boolean,
-    onlineError: String,
     audioPermission: Boolean,
     requestAudioPermission: () -> Unit,
     liked: Set<String>,
@@ -817,21 +767,16 @@ private fun HomeScreen(
                 Text("A E T H R A", color = colors.text, fontSize = 22.sp, fontWeight = FontWeight.Black, letterSpacing = 3.sp)
                 Text("MUSIC WITHOUT LIMITS", color = colors.accent, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
             }
-            Box(
-                Modifier.size(42.dp).clip(CircleShape).background(colors.accent),
-                contentAlignment = Alignment.Center
-            ) {
+            Box(Modifier.size(42.dp).clip(CircleShape).background(colors.accent), contentAlignment = Alignment.Center) {
                 Text("A", color = colors.background, fontSize = 22.sp, fontWeight = FontWeight.Black)
             }
         }
-
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("YOUR SOUND, YOUR SPACE.", color = colors.muted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.8.sp)
-            Text("Find your next\nfavourite.", color = colors.text, style = MaterialTheme.typography.headlineLarge, fontSize = 34.sp, lineHeight = 38.sp)
+            Text("Your music,
+your space.", color = colors.text, style = MaterialTheme.typography.headlineLarge, fontSize = 34.sp, lineHeight = 38.sp)
         }
-
         HeroPanel(count = tracks.size, onShuffle = onShuffle)
-
         if (!audioPermission) {
             AethraCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -846,7 +791,7 @@ private fun HomeScreen(
             AethraCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("YOUR LOCAL LIBRARY IS EMPTY", color = colors.accent, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
-                    Text("Discover music videos online, or play audio stored on this device.", color = colors.text, fontSize = 13.sp, lineHeight = 19.sp)
+                    Text("Add audio files to this device and they will appear here. Your local music remains available without an online account.", color = colors.text, fontSize = 13.sp, lineHeight = 19.sp)
                 }
             }
         } else {
@@ -854,29 +799,7 @@ private fun HomeScreen(
             tracks.take(8).forEach { track ->
                 TrackRow(
                     track = track,
-                    isLiked = liked.contains(track.id.toString()),
-                    onPlay = { onPlayTrack(track) },
-                    onLike = { onToggleLike(track) },
-                    isPlaying = activeTrackKey == track.stableKey
-                )
-            }
-        }
-
-        SectionHeading("DISCOVER ONLINE", if (onlineLoading) "LOADING" else onlineTracks.size.toString() + " TRACKS")
-        if (onlineError.isNotBlank()) {
-            Text(onlineError, color = colors.muted, fontSize = 12.sp)
-        } else if (onlineLoading && onlineTracks.isEmpty()) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = colors.accent)
-                Text("Finding music on YouTube…", color = colors.muted, fontSize = 12.sp)
-            }
-        } else if (onlineTracks.isEmpty()) {
-            Text("No online tracks are available right now. Try Discover again later.", color = colors.muted, fontSize = 12.sp)
-        } else {
-            onlineTracks.take(8).forEach { track ->
-                TrackRow(
-                    track = track,
-                    isLiked = liked.contains(track.stableKey),
+                    isLiked = liked.contains(track.stableKey) || liked.contains(track.id.toString()),
                     onPlay = { onPlayTrack(track) },
                     onLike = { onToggleLike(track) },
                     isPlaying = activeTrackKey == track.stableKey
@@ -891,52 +814,24 @@ private fun SearchScreen(
     query: String,
     onQueryChange: (String) -> Unit,
     tracks: List<Track>,
-    onlineTracks: List<Track>,
     activeTrackKey: String?,
-    onOnlineResults: (List<Track>) -> Unit,
     liked: Set<String>,
     onPlayTrack: (Track) -> Unit,
     onToggleLike: (Track) -> Unit
 ) {
     val colors = LocalAethraColors.current
-    val scope = rememberCoroutineScope()
-    var loading by remember { mutableStateOf(false) }
-    var onlineError by remember { mutableStateOf("") }
-    var hasSearched by remember { mutableStateOf(false) }
-
-    fun searchOnline(term: String) {
-        scope.launch {
-            loading = true
-            onlineError = ""
-            try {
-                onOnlineResults(YouTubeDataCatalog.search(term).map { it.asAppTrack() })
-                hasSearched = true
-            } catch (error: Exception) {
-                onlineError = error.message ?: "Could not reach the online music catalogue."
-            } finally {
-                loading = false
-            }
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        if (!hasSearched && onlineTracks.isEmpty()) searchOnline("")
-    }
-
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Text("Discover", color = colors.text, style = MaterialTheme.typography.headlineLarge, fontSize = 34.sp)
-        Text("Find tracks, artists and music videos on YouTube. Choose a result to open it on YouTube.", color = colors.muted, fontSize = 13.sp, lineHeight = 19.sp)
+        Text("Your music", color = colors.text, style = MaterialTheme.typography.headlineLarge, fontSize = 34.sp)
+        Text("Search songs already stored on this device.", color = colors.muted, fontSize = 13.sp, lineHeight = 19.sp)
         OutlinedTextField(
             value = query,
             onValueChange = onQueryChange,
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { searchOnline(query) }),
-            placeholder = { Text("Track, artist, album or genre", color = colors.muted) },
+            placeholder = { Text("Track, artist or album", color = colors.muted) },
             leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null, tint = colors.muted) },
             shape = RoundedCornerShape(if (colors.sharp) 3.dp else if (colors.glass) 24.dp else 16.dp),
             colors = OutlinedTextFieldDefaults.colors(
@@ -949,75 +844,23 @@ private fun SearchScreen(
                 unfocusedContainerColor = colors.surface
             )
         )
-        Row(
-            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            listOf("Pop", "Lo-fi", "Rock", "Classical", "Electronic").forEach { genre ->
-                AssistChip(
-                    onClick = {
-                        onQueryChange(genre)
-                        searchOnline(genre)
-                    },
-                    label = { Text(genre, fontSize = 11.sp) },
-                    shape = RoundedCornerShape(18.dp),
-                    colors = AssistChipDefaults.assistChipColors(
-                        containerColor = colors.surface.copy(alpha = if (colors.glass) 0.70f else 1f),
-                        labelColor = colors.text
-                    ),
-                    border = BorderStroke(1.dp, colors.outline.copy(alpha = if (colors.glass) 0.55f else 1f))
-                )
-            }
-        }
-        Button(
-            onClick = { searchOnline(query) },
-            enabled = !loading,
-            modifier = Modifier.fillMaxWidth().height(50.dp),
-            shape = RoundedCornerShape(if (colors.sharp) 3.dp else 16.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = colors.accent, contentColor = if (colors.sharp) Color.White else colors.background)
-        ) {
-            if (loading) {
-                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = if (colors.sharp) Color.White else colors.background)
-                Spacer(Modifier.width(10.dp))
-                Text("SEARCHING…")
-            } else Text("SEARCH YOUTUBE", fontWeight = FontWeight.ExtraBold, letterSpacing = 0.7.sp)
-        }
-        if (onlineError.isNotBlank()) {
-            AethraCard(Modifier.fillMaxWidth()) {
-                Text(onlineError, modifier = Modifier.padding(16.dp), color = colors.accentSecondary, fontSize = 12.sp, lineHeight = 18.sp)
-            }
+        SectionHeading("ON THIS DEVICE", tracks.size.toString() + " MATCHES")
+        if (tracks.isEmpty()) {
+            EmptyState(
+                if (query.isBlank()) "YOUR LIBRARY IS EMPTY" else "NO LOCAL MATCHES",
+                if (query.isBlank()) "Audio stored on this device will appear here after music access is allowed." else "Try another title, artist or album. Search currently covers your local music library."
+            )
         } else {
-            Text("YOUTUBE · VIDEO DISCOVERY", color = colors.muted, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-        }
-        val unifiedResults = (tracks + onlineTracks).distinctBy { it.stableKey }
-        SectionHeading(
-            if (query.isBlank()) "YOUR MUSIC & OPEN DISCOVERY" else "ALL MATCHING MUSIC",
-            unifiedResults.size.toString() + " TRACKS"
-        )
-        if (unifiedResults.isEmpty()) {
-            if (hasSearched && !loading && onlineError.isBlank()) {
-                EmptyState("NO MATCHES FOUND", "Try another title, artist or genre. Local tracks are matched instantly; online results come from YouTube.")
-            } else if (tracks.isEmpty()) {
-                Text("Search for a song or artist on YouTube. Music stored on this device will appear here too.", color = colors.muted, fontSize = 12.sp, lineHeight = 18.sp)
-            }
-        } else {
-            unifiedResults.take(48).forEach { track ->
+            tracks.take(100).forEach { track ->
                 TrackRow(
                     track,
-                    liked.contains(track.stableKey) || (track.source == "LOCAL" && liked.contains(track.id.toString())),
+                    liked.contains(track.stableKey) || liked.contains(track.id.toString()),
                     { onPlayTrack(track) },
                     { onToggleLike(track) },
                     activeTrackKey == track.stableKey
                 )
             }
         }
-        Text(
-            "YouTube results open in YouTube. They are discovery links, not playable audio streams inside AETHRA.",
-            color = colors.muted,
-            fontSize = 10.sp,
-            lineHeight = 15.sp
-        )
     }
 }
 
@@ -1090,11 +933,13 @@ private fun SettingsScreen(
                 icon = { Icon(Icons.Rounded.DarkMode, contentDescription = null) }
             )
         }
-        SetupSectionTitle("ONLINE DISCOVERY", "YouTube search · no AETHRA account")
+        SetupSectionTitle("MUSIC LIBRARY", "Local playback · no account required")
         AethraCard(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("YOUTUBE MUSIC DISCOVERY", color = colors.accent, fontWeight = FontWeight.ExtraBold, fontSize = 11.sp, letterSpacing = 1.3.sp)
-                Text("AETHRA uses the official YouTube Data API to find music videos and show their titles and artwork. Tap a result to open it on YouTube. The search API does not provide playable audio streams for in-app playback.", color = colors.text, fontSize = 12.sp, lineHeight = 18.sp)
+                Text("ON-DEVICE MUSIC", color = colors.accent, fontWeight = FontWeight.ExtraBold, fontSize = 11.sp, letterSpacing = 1.3.sp)
+                Text("AETHRA scans audio files on this device and plays them in the app. Your local library, liked tracks and playback queue remain available offline.", color = colors.text, fontSize = 12.sp, lineHeight = 18.sp)
+                Text("NAPSTER MUSIC CATALOGUE UNAVAILABLE", color = colors.muted, fontWeight = FontWeight.Bold, fontSize = 10.sp, letterSpacing = 0.7.sp)
+                Text("Napster has retired its licensed music catalogue. Its current developer API is for AI agents, not searching or streaming licensed songs.", color = colors.muted, fontSize = 11.sp, lineHeight = 16.sp)
             }
         }
         SetupSectionTitle("DESIGN LANGUAGE", "Change the complete visual character")
@@ -1105,7 +950,7 @@ private fun SettingsScreen(
             Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("ABOUT AETHRA", color = colors.accent, fontWeight = FontWeight.ExtraBold, fontSize = 11.sp, letterSpacing = 1.3.sp)
                 Text("AETHRA requires no account and inserts no AETHRA advertisements. Third-party music rights and availability remain governed by their providers.", color = colors.text, fontSize = 12.sp, lineHeight = 18.sp)
-                Text("VERSION 1.6.3 · LOCAL PLAYBACK + YOUTUBE DISCOVERY", color = colors.muted, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Text("VERSION 1.6.4 · LOCAL MUSIC LIBRARY", color = colors.muted, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             }
         }
     }
