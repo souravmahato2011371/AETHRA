@@ -53,10 +53,24 @@ object YouTubeDataCatalog {
             val stream = if (status in 200..299) connection.inputStream else connection.errorStream
             val body = stream.bufferedReader(StandardCharsets.UTF_8).use { it.readText() }
             if (status !in 200..299) {
-                val message = runCatching {
-                    JSONObject(body).optJSONObject("error")?.optString("message")
-                }.getOrNull().orEmpty()
-                throw IllegalStateException(message.ifBlank { "YouTube search failed (HTTP $status)." })
+                val error = runCatching { JSONObject(body).optJSONObject("error") }
+                    .getOrNull()
+                val message = error?.optString("message").orEmpty()
+                val reason = error?.optJSONArray("errors")
+                    ?.optJSONObject(0)?.optString("reason").orEmpty()
+                val statusName = error?.optString("status").orEmpty()
+                val diagnostic = listOf(reason, statusName).filter { it.isNotBlank() }
+                    .distinct().joinToString(" / ")
+                val detail = when (reason) {
+                    "serviceBlocked" -> "Google is blocking this API for the key or project. Check that YouTube Data API v3 is enabled and allowed by the key's API restrictions."
+                    "accessNotConfigured" -> "YouTube Data API v3 is not enabled for the Google Cloud project that owns this key."
+                    "keyInvalid", "API_KEY_INVALID" -> "The configured YouTube API key is invalid. Check the YOUTUBE_API_KEY GitHub Actions secret."
+                    "quotaExceeded", "dailyLimitExceeded" -> "The YouTube Data API quota has been exhausted for this project."
+                    else -> message.ifBlank { "YouTube search failed (HTTP $status)." }
+                }
+                throw IllegalStateException(
+                    if (diagnostic.isBlank()) detail else "$detail [$diagnostic; HTTP $status]"
+                )
             }
             val items = JSONObject(body).optJSONArray("items") ?: return@withContext emptyList()
             buildList {
