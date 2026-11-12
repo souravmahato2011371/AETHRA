@@ -646,10 +646,10 @@ private fun AethraExperience(
                         horizontalArrangement = Arrangement.spacedBy(5.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        NavigationDockItem(AethraTab.HOME, "Home", Icons.Rounded.Home, activeTab == AethraTab.HOME, colors) { onTabChange(AethraTab.HOME) }
-                        NavigationDockItem(AethraTab.SEARCH, "Discover", Icons.Rounded.Search, activeTab == AethraTab.SEARCH, colors) { onTabChange(AethraTab.SEARCH) }
-                        NavigationDockItem(AethraTab.LIBRARY, "Library", Icons.Rounded.LibraryMusic, activeTab == AethraTab.LIBRARY, colors) { onTabChange(AethraTab.LIBRARY) }
-                        NavigationDockItem(AethraTab.SETTINGS, "Settings", Icons.Rounded.Settings, activeTab == AethraTab.SETTINGS, colors) { onTabChange(AethraTab.SETTINGS) }
+                        NavigationDockItem("Home", Icons.Rounded.Home, activeTab == AethraTab.HOME, colors) { onTabChange(AethraTab.HOME) }
+                        NavigationDockItem("Discover", Icons.Rounded.Search, activeTab == AethraTab.SEARCH, colors) { onTabChange(AethraTab.SEARCH) }
+                        NavigationDockItem("Library", Icons.Rounded.LibraryMusic, activeTab == AethraTab.LIBRARY, colors) { onTabChange(AethraTab.LIBRARY) }
+                        NavigationDockItem("Settings", Icons.Rounded.Settings, activeTab == AethraTab.SETTINGS, colors) { onTabChange(AethraTab.SETTINGS) }
                     }
                 }
             }
@@ -734,8 +734,7 @@ private fun AethraExperience(
 }
 
 @Composable
-private fun NavigationDockItem(
-    tab: AethraTab,
+private fun RowScope.NavigationDockItem(
     label: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     selected: Boolean,
@@ -1020,7 +1019,7 @@ private fun LibraryScreen(
             EmptyState("NOTHING SAVED YET", "Tap the heart beside a track to keep it in your library.")
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(7.dp), contentPadding = PaddingValues(bottom = 18.dp)) {
-                items(tracks, key = { it.id }) { track ->
+                items(tracks, key = { it.stableKey }) { track ->
                     TrackRow(track, true, { onPlayTrack(track) }, { onToggleLike(track) }, activeTrackKey == track.stableKey)
                 }
             }
@@ -1074,7 +1073,7 @@ private fun SettingsScreen(
             Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("ABOUT AETHRA", color = colors.accent, fontWeight = FontWeight.ExtraBold, fontSize = 11.sp, letterSpacing = 1.3.sp)
                 Text("AETHRA requires no account and inserts no AETHRA advertisements. Third-party music rights and availability remain governed by their providers.", color = colors.text, fontSize = 12.sp, lineHeight = 18.sp)
-                Text("VERSION 1.6.1 · LOCAL PLAYBACK + YOUTUBE DISCOVERY", color = colors.muted, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Text("VERSION 1.6.3 · LOCAL PLAYBACK + YOUTUBE DISCOVERY", color = colors.muted, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             }
         }
     }
@@ -1398,37 +1397,85 @@ private fun TrackRow(
     isPlaying: Boolean = false
 ) {
     val colors = LocalAethraColors.current
+    val shape = RoundedCornerShape(if (colors.sharp) 2.dp else if (colors.glass) 19.dp else 16.dp)
     val cardColor by animateColorAsState(
-        targetValue = if (isPlaying) colors.accent.copy(alpha = if (colors.glass) 0.18f else 0.13f) else colors.surface,
-        animationSpec = tween(260), label = "track-card-active"
+        targetValue = if (isPlaying) colors.accent.copy(alpha = if (colors.glass) 0.20f else 0.13f) else colors.surface,
+        animationSpec = spring(dampingRatio = 0.82f, stiffness = 520f),
+        label = "track-card-active"
     )
+    val cardScale by animateFloatAsState(
+        targetValue = if (isPlaying) 1.006f else 1f,
+        animationSpec = spring(dampingRatio = 0.78f, stiffness = 520f),
+        label = "track-card-scale"
+    )
+    val cardBrush = if (colors.glass) {
+        Brush.linearGradient(
+            listOf(
+                Color.White.copy(alpha = if (isPlaying) 0.18f else 0.105f),
+                cardColor.copy(alpha = 0.80f),
+                Color(0xFF8FB9F4).copy(alpha = if (isPlaying) 0.15f else 0.055f)
+            )
+        )
+    } else Brush.linearGradient(listOf(cardColor, cardColor))
     Row(
         Modifier.fillMaxWidth()
-            .clip(RoundedCornerShape(if (colors.sharp) 2.dp else if (colors.glass) 20.dp else 16.dp))
-            .background(cardColor)
-            .then(if (colors.sharp) Modifier.border(1.5.dp, colors.text, RoundedCornerShape(2.dp)) else Modifier)
+            .graphicsLayer { scaleX = cardScale; scaleY = cardScale }
+            .clip(shape)
+            .background(cardBrush)
+            .then(
+                when {
+                    colors.glass -> Modifier.border(
+                        if (isPlaying) 1.25.dp else 0.75.dp,
+                        Brush.linearGradient(listOf(Color.White.copy(alpha = 0.48f), Color.White.copy(alpha = 0.10f), Color(0xFF9CCBFF).copy(alpha = 0.28f))),
+                        shape
+                    )
+                    colors.sharp -> Modifier.border(1.5.dp, colors.text, shape)
+                    else -> Modifier
+                }
+            )
             .clickable(onClick = onPlay)
-            .padding(9.dp),
+            .padding(start = 9.dp, end = 5.dp, top = 8.dp, bottom = 8.dp)
+            .animateContentSize(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        TrackArtwork(track, track.title, Modifier.size(54.dp))
+        Box {
+            TrackArtwork(track, track.title, Modifier.size(56.dp))
+            if (isPlaying) {
+                Box(
+                    Modifier.matchParentSize().clip(RoundedCornerShape(14.dp))
+                        .background(Color.Black.copy(alpha = 0.18f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    PlayingBars(Modifier.size(width = 22.dp, height = 23.dp), tint = Color.White)
+                }
+            }
+        }
         Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(track.title, color = colors.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(
-                if (track.source == "YOUTUBE_VIDEO") track.artist + " · YOUTUBE" else track.artist,
-                color = colors.muted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
-            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    if (track.source == "YOUTUBE_VIDEO") "YOUTUBE VIDEO" else track.artist,
+                    color = colors.muted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
+                )
+                if (isPlaying) {
+                    Box(Modifier.size(5.dp).clip(CircleShape).background(colors.accent))
+                    Text("PLAYING", color = colors.accent, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.7.sp)
+                }
+            }
         }
-        if (isPlaying) {
-            PlayingBars(Modifier.padding(horizontal = 7.dp).size(width = 16.dp, height = 18.dp), tint = colors.accent)
-        }
-        Text(if (track.source == "YOUTUBE_VIDEO") "OPEN" else formatTime(track.duration), color = if (isPlaying) colors.accent else colors.muted, fontSize = 10.sp, fontWeight = if (isPlaying) FontWeight.Bold else FontWeight.Normal)
+        Text(
+            if (track.source == "YOUTUBE_VIDEO") "VIDEO" else formatTime(track.duration),
+            color = if (isPlaying) colors.accent else colors.muted,
+            fontSize = 9.sp,
+            fontWeight = if (isPlaying) FontWeight.Bold else FontWeight.Medium
+        )
         IconButton(onClick = onLike) {
             Icon(
                 if (isLiked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
                 contentDescription = if (isLiked) "Remove from liked music" else "Add to liked music",
-                tint = if (isLiked) colors.accentSecondary else colors.muted
+                tint = if (isLiked) colors.accentSecondary else colors.muted,
+                modifier = Modifier.size(21.dp)
             )
         }
     }
