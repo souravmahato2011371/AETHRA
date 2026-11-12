@@ -112,15 +112,15 @@ fun AethraTheme(
     val colors = when (style) {
         VisualStyle.LIQUID_GLASS -> if (mode == ThemeMode.DARK) {
             AethraColors(
-                Color(0xFF080F22), Color(0xB8253E67), Color(0xB85D83B7),
-                Color(0xFFF7FAFF), Color(0xFFB9C9E2), Color(0xFFD7E5FF),
-                Color(0xFF79E5E8), Color(0xBFFFFFFF), true
+                Color(0xFF071321), Color(0xA9274266), Color(0xB9496F9D),
+                Color(0xFFF5F9FF), Color(0xFFC3D2E8), Color(0xFFE4F2FF),
+                Color(0xFF8DECE7), Color(0x88FFFFFF), true
             )
         } else {
             AethraColors(
-                Color(0xFFE4EDF8), Color(0xA6FFFFFF), Color(0xA9D9E8F8),
-                Color(0xFF15263E), Color(0xFF5E718B), Color(0xFF385FA8),
-                Color(0xFF087F91), Color(0xBFFFFFFF), true
+                Color(0xFFEAF2FC), Color(0xD9FFFFFF), Color(0xC7E3F8),
+                Color(0xFF182A42), Color(0xFF5A6E86), Color(0xFF315D9C),
+                Color(0xFF078C9B), Color(0x997E9BBE), true
             )
         }
 
