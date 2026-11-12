@@ -640,31 +640,16 @@ private fun AethraExperience(
                             onNext = onNext
                         )
                     }
-                    NavigationBar(
-                        containerColor = if (colors.glass) Color.Transparent else colors.surface,
-                        tonalElevation = 0.dp
+                    Row(
+                        Modifier.fillMaxWidth().height(76.dp)
+                            .padding(horizontal = 10.dp, vertical = 7.dp),
+                        horizontalArrangement = Arrangement.spacedBy(5.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        val destinations = listOf(
-                            Triple(AethraTab.HOME, "Home", Icons.Rounded.Home),
-                            Triple(AethraTab.SEARCH, "Search", Icons.Rounded.Search),
-                            Triple(AethraTab.LIBRARY, "Library", Icons.Rounded.LibraryMusic),
-                            Triple(AethraTab.SETTINGS, "Settings", Icons.Rounded.Settings)
-                        )
-                        destinations.forEach { (tab, label, icon) ->
-                            NavigationBarItem(
-                                selected = activeTab == tab,
-                                onClick = { onTabChange(tab) },
-                                icon = { Icon(icon, contentDescription = label) },
-                                label = { Text(label) },
-                                colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = colors.accent,
-                                    selectedTextColor = colors.accent,
-                                    unselectedIconColor = colors.muted,
-                                    unselectedTextColor = colors.muted,
-                                    indicatorColor = colors.accent.copy(alpha = 0.14f)
-                                )
-                            )
-                        }
+                        NavigationDockItem(AethraTab.HOME, "Home", Icons.Rounded.Home, activeTab == AethraTab.HOME, colors) { onTabChange(AethraTab.HOME) }
+                        NavigationDockItem(AethraTab.SEARCH, "Discover", Icons.Rounded.Search, activeTab == AethraTab.SEARCH, colors) { onTabChange(AethraTab.SEARCH) }
+                        NavigationDockItem(AethraTab.LIBRARY, "Library", Icons.Rounded.LibraryMusic, activeTab == AethraTab.LIBRARY, colors) { onTabChange(AethraTab.LIBRARY) }
+                        NavigationDockItem(AethraTab.SETTINGS, "Settings", Icons.Rounded.Settings, activeTab == AethraTab.SETTINGS, colors) { onTabChange(AethraTab.SETTINGS) }
                     }
                 }
             }
@@ -736,6 +721,8 @@ private fun AethraExperience(
                 queue = playbackQueue,
                 queueIndex = queueIndex,
                 onPlayQueueItem = onPlayQueueItem,
+                isLiked = currentTrack != null && (liked.contains(currentTrack.stableKey) || (currentTrack.source == "LOCAL" && liked.contains(currentTrack.id.toString()))),
+                onToggleLike = { currentTrack?.let(onToggleLike) },
                 onClose = onCloseNowPlaying,
                 onPlayPause = onPlayPause,
                 onNext = onNext,
@@ -743,6 +730,58 @@ private fun AethraExperience(
                 onSeek = onSeek
             )
         }
+    }
+}
+
+@Composable
+private fun NavigationDockItem(
+    tab: AethraTab,
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    selected: Boolean,
+    colors: AethraColors,
+    onClick: () -> Unit
+) {
+    val scale by animateFloatAsState(
+        targetValue = if (selected) 1.08f else 1f,
+        animationSpec = spring(dampingRatio = 0.72f, stiffness = 520f),
+        label = "navigation-icon-scale"
+    )
+    val tint by animateColorAsState(
+        targetValue = if (selected) colors.accent else colors.muted,
+        animationSpec = tween(220),
+        label = "navigation-icon-tint"
+    )
+    Column(
+        Modifier.weight(1f).fillMaxHeight()
+            .clip(RoundedCornerShape(18.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 3.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Box(
+            Modifier.width(if (selected) 56.dp else 44.dp).height(32.dp)
+                .clip(CircleShape)
+                .background(if (selected) colors.accent.copy(alpha = if (colors.glass) 0.20f else 0.14f) else Color.Transparent),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                icon,
+                contentDescription = label,
+                tint = tint,
+                modifier = Modifier.size(21.dp).graphicsLayer { scaleX = scale; scaleY = scale }
+            )
+        }
+        Spacer(Modifier.height(3.dp))
+        Text(
+            label,
+            color = tint,
+            fontSize = 9.sp,
+            lineHeight = 11.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            maxLines = 1
+        )
     }
 }
 
@@ -1052,6 +1091,8 @@ private fun NowPlayingScreen(
     queue: List<Track>,
     queueIndex: Int,
     onPlayQueueItem: (Int) -> Unit,
+    isLiked: Boolean,
+    onToggleLike: () -> Unit,
     onClose: () -> Unit,
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
@@ -1060,120 +1101,186 @@ private fun NowPlayingScreen(
 ) {
     val colors = LocalAethraColors.current
     var queueOpen by remember { mutableStateOf(false) }
-    val infinite = rememberInfiniteTransition(label = "cover-motion")
+    val infinite = rememberInfiniteTransition(label = "now-playing-optical-motion")
     val artScale by infinite.animateFloat(
         initialValue = 1f,
-        targetValue = 1.018f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2400),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "cover-scale"
+        targetValue = 1.016f,
+        animationSpec = infiniteRepeatable(tween(3200), repeatMode = RepeatMode.Reverse),
+        label = "now-playing-art-scale"
     )
-    Column(
-        Modifier.fillMaxSize().background(colors.background).padding(horizontal = 24.dp, vertical = 18.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onClose) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Close player", tint = colors.text) }
-            Spacer(Modifier.weight(1f))
-            Text("NOW PLAYING", color = colors.muted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.8.sp)
-            Spacer(Modifier.weight(1f))
-            IconButton(onClick = { queueOpen = true }) { Icon(Icons.AutoMirrored.Rounded.QueueMusic, contentDescription = "Open queue", tint = colors.text) }
-        }
-        Spacer(Modifier.weight(0.7f))
-        Box(
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp).aspectRatio(1f)
-                .graphicsLayer {
-                    scaleX = if (isPlaying) artScale else 1f
-                    scaleY = if (isPlaying) artScale else 1f
-                    shadowElevation = if (colors.glass) 30.dp.toPx() else 14.dp.toPx()
-                    shape = RoundedCornerShape(if (colors.glass) 32.dp else 20.dp)
-                    clip = true
-                }
-                .then(
-                    if (colors.glass) Modifier
-                        .background(
-                            Brush.linearGradient(
-                                listOf(Color.White.copy(alpha = 0.34f), Color(0xFF9FCBFF).copy(alpha = 0.22f),
-                                    Color(0xFF5C83C8).copy(alpha = 0.16f), Color.White.copy(alpha = 0.08f))
-                            ),
-                            RoundedCornerShape(32.dp)
-                        )
-                        .border(1.dp, Color.White.copy(alpha = 0.62f), RoundedCornerShape(32.dp))
-                    else Modifier
+    val aura by infinite.animateFloat(
+        initialValue = 0.12f,
+        targetValue = 0.28f,
+        animationSpec = infiniteRepeatable(tween(4200), repeatMode = RepeatMode.Reverse),
+        label = "now-playing-aura"
+    )
+
+    BoxWithConstraints(
+        Modifier.fillMaxSize().then(
+            if (colors.glass) Modifier.background(
+                Brush.linearGradient(
+                    listOf(Color(0xFF071326), Color(0xFF142849), Color(0xFF0A172A), Color(0xFF0A111E))
                 )
-                .padding(if (colors.glass) 9.dp else 0.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            TrackArtwork(
-                track = track,
-                title = title,
-                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(if (colors.glass) 25.dp else 20.dp))
-            )
-            if (colors.glass) {
-                Canvas(Modifier.fillMaxSize()) {
-                    drawRoundRect(
-                        Brush.verticalGradient(
-                            listOf(Color.White.copy(alpha = 0.24f), Color.Transparent, Color.Black.copy(alpha = 0.12f))
-                        ),
-                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(25.dp.toPx())
-                    )
-                    drawLine(
-                        Color.White.copy(alpha = 0.56f),
-                        androidx.compose.ui.geometry.Offset(size.width * 0.12f, 1.dp.toPx()),
-                        androidx.compose.ui.geometry.Offset(size.width * 0.72f, 1.dp.toPx()),
-                        1.dp.toPx()
-                    )
-                }
-            }
-        }
-        Spacer(Modifier.weight(0.8f))
-        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Text(title.ifBlank { "Nothing playing" }, color = colors.text, fontSize = 23.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(artist.ifBlank { "Choose a track from your library" }, color = colors.muted, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        Spacer(Modifier.height(22.dp))
-        val safeDuration = durationMs.coerceAtLeast(1L)
-        Slider(
-            value = (positionMs.toFloat() / safeDuration.toFloat()).coerceIn(0f, 1f),
-            onValueChange = { onSeek((it * safeDuration).toLong()) },
-            modifier = Modifier.fillMaxWidth(),
-            colors = SliderDefaults.colors(
-                thumbColor = colors.accent,
-                activeTrackColor = colors.accent,
-                inactiveTrackColor = colors.outline
-            )
+            ) else Modifier.background(colors.background)
         )
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(formatTime(positionMs), color = colors.muted, fontSize = 11.sp)
-            Text(formatTime(durationMs), color = colors.muted, fontSize = 11.sp)
-        }
-        Spacer(Modifier.height(14.dp))
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
+    ) {
+        val artworkSize = (maxHeight * 0.405f).coerceIn(184.dp, 372.dp)
+        Column(
+            Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            IconButton(onClick = onPrevious, modifier = Modifier.size(50.dp)) {
-                Icon(Icons.Rounded.SkipPrevious, contentDescription = "Previous", tint = colors.text, modifier = Modifier.size(31.dp))
-            }
-            IconButton(
-                onClick = onPlayPause,
-                modifier = Modifier.size(68.dp).shadow(12.dp, CircleShape).clip(CircleShape).background(colors.accent)
+            Row(
+                Modifier.fillMaxWidth().height(48.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                    contentDescription = if (isPlaying) "Pause" else "Play",
-                    tint = colors.background,
-                    modifier = Modifier.size(36.dp)
+                IconButton(onClick = onClose) {
+                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Close player", tint = colors.text)
+                }
+                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                    Text("A E T H R A", color = colors.text, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 2.4.sp)
+                    Text("NOW PLAYING", color = colors.muted, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.7.sp)
+                }
+                IconButton(onClick = { queueOpen = true }) {
+                    Icon(Icons.AutoMirrored.Rounded.QueueMusic, contentDescription = "Open queue", tint = colors.text)
+                }
+            }
+
+            Spacer(Modifier.weight(0.42f))
+            Box(
+                Modifier.size(artworkSize)
+                    .graphicsLayer {
+                        scaleX = if (isPlaying) artScale else 1f
+                        scaleY = if (isPlaying) artScale else 1f
+                    }
+                    .then(if (colors.glass) Modifier.shadow(34.dp, RoundedCornerShape(34.dp), clip = false) else Modifier)
+                    .clip(RoundedCornerShape(if (colors.glass) 34.dp else 22.dp))
+                    .background(
+                        if (colors.glass) Brush.linearGradient(
+                            listOf(Color.White.copy(alpha = 0.40f), Color(0xFF9FCBFF).copy(alpha = 0.24f), Color(0xFF5479B6).copy(alpha = 0.20f), Color.White.copy(alpha = 0.08f))
+                        ) else Brush.linearGradient(listOf(colors.raised, colors.surface))
+                    )
+                    .then(if (colors.glass) Modifier.border(1.dp, Color.White.copy(alpha = 0.62f), RoundedCornerShape(34.dp)) else Modifier)
+                    .padding(if (colors.glass) 9.dp else 0.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                TrackArtwork(
+                    track = track,
+                    title = title,
+                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(if (colors.glass) 26.dp else 20.dp))
                 )
+                if (colors.glass) {
+                    Canvas(Modifier.fillMaxSize()) {
+                        drawRoundRect(
+                            Brush.verticalGradient(
+                                listOf(Color.White.copy(alpha = 0.25f), Color.Transparent, Color.Black.copy(alpha = 0.13f))
+                            ),
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(26.dp.toPx())
+                        )
+                        drawCircle(
+                            Brush.radialGradient(
+                                listOf(Color.White.copy(alpha = aura), Color.Transparent),
+                                center = androidx.compose.ui.geometry.Offset(size.width * 0.18f, size.height * 0.12f),
+                                radius = size.width * 0.72f
+                            ),
+                            radius = size.width * 0.72f,
+                            center = androidx.compose.ui.geometry.Offset(size.width * 0.18f, size.height * 0.12f)
+                        )
+                        drawLine(
+                            Color.White.copy(alpha = 0.62f),
+                            androidx.compose.ui.geometry.Offset(size.width * 0.12f, 1.dp.toPx()),
+                            androidx.compose.ui.geometry.Offset(size.width * 0.76f, 1.dp.toPx()),
+                            1.dp.toPx()
+                        )
+                    }
+                }
             }
-            IconButton(onClick = onNext, modifier = Modifier.size(50.dp)) {
-                Icon(Icons.Rounded.SkipNext, contentDescription = "Next", tint = colors.text, modifier = Modifier.size(31.dp))
+            Spacer(Modifier.weight(0.48f))
+
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text(
+                        title.ifBlank { "Nothing playing" },
+                        color = colors.text,
+                        fontSize = 22.sp,
+                        lineHeight = 27.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        artist.ifBlank { "Choose a track from your library" },
+                        color = colors.muted,
+                        fontSize = 14.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                IconButton(onClick = onToggleLike, enabled = track != null) {
+                    Icon(
+                        if (isLiked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                        contentDescription = if (isLiked) "Remove from liked music" else "Add to liked music",
+                        tint = if (isLiked) colors.accentSecondary else colors.muted,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
             }
+
+            Spacer(Modifier.height(14.dp))
+            val safeDuration = durationMs.coerceAtLeast(1L)
+            Slider(
+                value = (positionMs.toFloat() / safeDuration.toFloat()).coerceIn(0f, 1f),
+                onValueChange = { onSeek((it * safeDuration).toLong()) },
+                modifier = Modifier.fillMaxWidth().height(28.dp),
+                colors = SliderDefaults.colors(
+                    thumbColor = Color.White,
+                    activeTrackColor = colors.accent,
+                    inactiveTrackColor = colors.outline.copy(alpha = 0.62f),
+                    activeTickColor = Color.Transparent,
+                    inactiveTickColor = Color.Transparent
+                )
+            )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(formatTime(positionMs), color = colors.muted, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+                Text(formatTime(durationMs), color = colors.muted, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+            }
+
+            Spacer(Modifier.height(14.dp))
+            Row(
+                Modifier.fillMaxWidth().height(76.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onPrevious, modifier = Modifier.size(52.dp)) {
+                    Icon(Icons.Rounded.SkipPrevious, contentDescription = "Previous", tint = colors.text, modifier = Modifier.size(30.dp))
+                }
+                Box(
+                    Modifier.size(68.dp)
+                        .shadow(if (colors.glass) 22.dp else 12.dp, CircleShape, clip = false)
+                        .clip(CircleShape)
+                        .background(
+                            if (colors.glass) Brush.linearGradient(listOf(Color.White, Color(0xFFB7D7FA), Color(0xFF7FA6DB)))
+                            else Brush.linearGradient(listOf(colors.accent, colors.accentSecondary))
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    IconButton(onClick = onPlayPause, modifier = Modifier.fillMaxSize()) {
+                        Icon(
+                            if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                            contentDescription = if (isPlaying) "Pause" else "Play",
+                            tint = if (colors.glass) Color(0xFF14233B) else colors.background,
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
+                }
+                IconButton(onClick = onNext, modifier = Modifier.size(52.dp)) {
+                    Icon(Icons.Rounded.SkipNext, contentDescription = "Next", tint = colors.text, modifier = Modifier.size(30.dp))
+                }
+            }
+            Spacer(Modifier.weight(0.28f))
         }
-        Spacer(Modifier.weight(0.7f))
     }
 
     if (queueOpen) {
@@ -1196,13 +1303,13 @@ private fun NowPlayingScreen(
                         itemsIndexed(queue, key = { index, item -> "${item.stableKey}:$index" }) { index, item ->
                             Row(
                                 Modifier.fillMaxWidth()
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(if (index == queueIndex) colors.accent.copy(alpha = 0.14f) else Color.Transparent)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(if (index == queueIndex) colors.accent.copy(alpha = 0.15f) else colors.surface.copy(alpha = 0.55f))
                                     .clickable {
                                         onPlayQueueItem(index)
                                         queueOpen = false
                                     }
-                                    .padding(horizontal = 10.dp, vertical = 11.dp),
+                                    .padding(horizontal = 12.dp, vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
