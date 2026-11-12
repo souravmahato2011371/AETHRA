@@ -1774,8 +1774,7 @@ private fun HeroPanel(count: Int, onShuffle: () -> Unit) {
             }
             Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Text(
-                    if (colors.glass) "Sound in
-motion." else if (colors.sharp) "MAKE\nROOM FOR\nMUSIC." else "Made for\nlistening.",
+                    if (colors.glass) "Sound in motion." else if (colors.sharp) "MAKE\nROOM FOR\nMUSIC." else "Made for\nlistening.",
                     color = if (colors.sharp) Color(0xFF171717) else if (isLightGlass) Color(0xFF173451) else Color.White,
                     fontSize = 31.sp,
                     lineHeight = 33.sp,
