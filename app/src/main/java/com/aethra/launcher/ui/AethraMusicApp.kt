@@ -122,8 +122,8 @@ private fun com.aethra.launcher.data.OnlineTrack.asAppTrack(): Track = Track(
     artist = artist,
     album = album,
     duration = durationSeconds * 1000L,
-    uri = android.net.Uri.parse(streamUrl),
-    source = "YOUTUBE",
+    uri = android.net.Uri.parse(watchUrl),
+    source = "YOUTUBE_VIDEO",
     artworkUrl = artworkUrl,
     shareUrl = shareUrl,
     licenseUrl = licenseUrl
@@ -250,7 +250,7 @@ fun AethraMusicApp(controller: MediaController) {
     }
 
     fun playTrack(track: Track) {
-        if (track.source == "YOUTUBE") {
+        if (track.source == "YOUTUBE_VIDEO") {
             val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, track.uri)
             runCatching { context.startActivity(intent) }
             return
@@ -797,7 +797,7 @@ private fun HomeScreen(
             AethraCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("YOUR LOCAL LIBRARY IS EMPTY", color = colors.accent, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
-                    Text("You can still discover and play openly licensed online audio below.", color = colors.text, fontSize = 13.sp, lineHeight = 19.sp)
+                    Text("Discover music videos online, or play audio stored on this device.", color = colors.text, fontSize = 13.sp, lineHeight = 19.sp)
                 }
             }
         } else {
@@ -879,7 +879,7 @@ private fun SearchScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Text("Discover", color = colors.text, style = MaterialTheme.typography.headlineLarge, fontSize = 34.sp)
-        Text("Explore music videos and official listening links from YouTube.", color = colors.muted, fontSize = 13.sp, lineHeight = 19.sp)
+        Text("Find tracks, artists and music videos on YouTube. Choose a result to open it on YouTube.", color = colors.muted, fontSize = 13.sp, lineHeight = 19.sp)
         OutlinedTextField(
             value = query,
             onValueChange = onQueryChange,
@@ -916,7 +916,7 @@ private fun SearchScreen(
                 Text(onlineError, modifier = Modifier.padding(16.dp), color = colors.accentSecondary, fontSize = 12.sp, lineHeight = 18.sp)
             }
         } else {
-            Text("YOUTUBE · MUSIC DISCOVERY", color = colors.muted, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Text("YOUTUBE · VIDEO DISCOVERY", color = colors.muted, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
         }
         val unifiedResults = (tracks + onlineTracks).distinctBy { it.stableKey }
         SectionHeading(
@@ -941,7 +941,7 @@ private fun SearchScreen(
             }
         }
         Text(
-            "YouTube results open on YouTube for listening. Search results do not provide direct audio-stream access.",
+            "YouTube results open in YouTube. They are discovery links, not playable audio streams inside AETHRA.",
             color = colors.muted,
             fontSize = 10.sp,
             lineHeight = 15.sp
@@ -1018,11 +1018,11 @@ private fun SettingsScreen(
                 icon = { Icon(Icons.Rounded.DarkMode, contentDescription = null) }
             )
         }
-        SetupSectionTitle("ONLINE MUSIC", "No account or API key needed")
+        SetupSectionTitle("ONLINE DISCOVERY", "YouTube search · no AETHRA account")
         AethraCard(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("OPEN MUSIC DISCOVERY", color = colors.accent, fontWeight = FontWeight.ExtraBold, fontSize = 11.sp, letterSpacing = 1.3.sp)
-                Text("AETHRA searches public audio items with declared Creative Commons licences through the Internet Archive. Availability and playback depend on each item's rights and stream availability.", color = colors.text, fontSize = 12.sp, lineHeight = 18.sp)
+                Text("YOUTUBE MUSIC DISCOVERY", color = colors.accent, fontWeight = FontWeight.ExtraBold, fontSize = 11.sp, letterSpacing = 1.3.sp)
+                Text("AETHRA uses the official YouTube Data API to find music videos and show their titles and artwork. Tap a result to open it on YouTube. The search API does not provide playable audio streams for in-app playback.", color = colors.text, fontSize = 12.sp, lineHeight = 18.sp)
             }
         }
         SetupSectionTitle("DESIGN LANGUAGE", "Change the complete visual character")
@@ -1033,7 +1033,7 @@ private fun SettingsScreen(
             Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("ABOUT AETHRA", color = colors.accent, fontWeight = FontWeight.ExtraBold, fontSize = 11.sp, letterSpacing = 1.3.sp)
                 Text("AETHRA requires no account and inserts no AETHRA advertisements. Third-party music rights and availability remain governed by their providers.", color = colors.text, fontSize = 12.sp, lineHeight = 18.sp)
-                Text("VERSION 1.4.0 · LOCAL + OPEN MUSIC", color = colors.muted, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Text("VERSION 1.6.1 · LOCAL PLAYBACK + YOUTUBE DISCOVERY", color = colors.muted, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             }
         }
     }
@@ -1253,14 +1253,14 @@ private fun TrackRow(
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(track.title, color = colors.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
-                if (track.source == "YOUTUBE") track.artist + " · YOUTUBE" else track.artist,
+                if (track.source == "YOUTUBE_VIDEO") track.artist + " · YOUTUBE" else track.artist,
                 color = colors.muted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
             )
         }
         if (isPlaying) {
             PlayingBars(Modifier.padding(horizontal = 7.dp).size(width = 16.dp, height = 18.dp), tint = colors.accent)
         }
-        Text(if (track.source == "YOUTUBE") "OPEN" else formatTime(track.duration), color = if (isPlaying) colors.accent else colors.muted, fontSize = 10.sp, fontWeight = if (isPlaying) FontWeight.Bold else FontWeight.Normal)
+        Text(if (track.source == "YOUTUBE_VIDEO") "OPEN" else formatTime(track.duration), color = if (isPlaying) colors.accent else colors.muted, fontSize = 10.sp, fontWeight = if (isPlaying) FontWeight.Bold else FontWeight.Normal)
         IconButton(onClick = onLike) {
             Icon(
                 if (isLiked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
