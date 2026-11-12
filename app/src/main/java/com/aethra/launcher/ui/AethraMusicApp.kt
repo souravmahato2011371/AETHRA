@@ -1042,13 +1042,13 @@ private fun SettingsScreen(
                 icon = { Icon(Icons.Rounded.DarkMode, contentDescription = null) }
             )
         }
-        SetupSectionTitle("MUSIC LIBRARY", "Local playback · no account required")
+        SetupSectionTitle("MUSIC LIBRARY", "Local collection · online discovery")
         AethraCard(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("ON-DEVICE MUSIC", color = colors.accent, fontWeight = FontWeight.ExtraBold, fontSize = 11.sp, letterSpacing = 1.3.sp)
                 Text("AETHRA scans audio files on this device and plays them in the app. Your local library, liked tracks and playback queue remain available offline.", color = colors.text, fontSize = 12.sp, lineHeight = 18.sp)
-                Text("NAPSTER MUSIC CATALOGUE UNAVAILABLE", color = colors.muted, fontWeight = FontWeight.Bold, fontSize = 10.sp, letterSpacing = 0.7.sp)
-                Text("Napster has retired its licensed music catalogue. Its current developer API is for AI agents, not searching or streaming licensed songs.", color = colors.muted, fontSize = 11.sp, lineHeight = 16.sp)
+                Text("FREE MUSIC API · EXPERIMENTAL", color = colors.muted, fontWeight = FontWeight.Bold, fontSize = 10.sp, letterSpacing = 0.7.sp)
+                Text("Online search and playback use an unofficial third-party API that its maintainer marked deprecated. Availability, stream quality and usage rights are controlled by that provider; results may stop working without notice.", color = colors.muted, fontSize = 11.sp, lineHeight = 16.sp)
             }
         }
         SetupSectionTitle("DESIGN LANGUAGE", "Change the complete visual character")
