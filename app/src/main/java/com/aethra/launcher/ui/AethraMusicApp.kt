@@ -795,8 +795,21 @@ your space.", color = colors.text, style = MaterialTheme.typography.headlineLarg
                 }
             }
         } else {
-            SectionHeading("ON THIS DEVICE", tracks.size.toString() + " TRACKS")
-            tracks.take(8).forEach { track ->
+            SectionHeading("YOUR COLLECTION", tracks.size.toString() + " TRACKS")
+            androidx.compose.foundation.lazy.LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(end = 4.dp)
+            ) {
+                items(tracks.take(12), key = { it.stableKey }) { track ->
+                    CollectionTrackCard(
+                        track = track,
+                        isPlaying = activeTrackKey == track.stableKey,
+                        onPlay = { onPlayTrack(track) }
+                    )
+                }
+            }
+            SectionHeading("ALL TRACKS", "ON THIS DEVICE")
+            tracks.take(30).forEach { track ->
                 TrackRow(
                     track = track,
                     isLiked = liked.contains(track.stableKey) || liked.contains(track.id.toString()),
@@ -806,6 +819,61 @@ your space.", color = colors.text, style = MaterialTheme.typography.headlineLarg
                 )
             }
         }
+    }
+}
+
+
+@Composable
+private fun CollectionTrackCard(
+    track: Track,
+    isPlaying: Boolean,
+    onPlay: () -> Unit
+) {
+    val colors = LocalAethraColors.current
+    val shape = RoundedCornerShape(if (colors.sharp) 3.dp else 18.dp)
+    val emphasis by animateFloatAsState(
+        targetValue = if (isPlaying) 1.025f else 1f,
+        animationSpec = spring(dampingRatio = 0.78f, stiffness = 460f),
+        label = "collection-card-emphasis"
+    )
+    Column(
+        Modifier.width(142.dp)
+            .graphicsLayer { scaleX = emphasis; scaleY = emphasis }
+            .clip(shape)
+            .background(colors.surface)
+            .then(if (colors.glass) Modifier.border(1.dp, Color.White.copy(alpha = 0.22f), shape) else Modifier)
+            .clickable(onClick = onPlay)
+            .padding(9.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Box {
+            TrackArtwork(track, track.title, Modifier.fillMaxWidth().height(124.dp))
+            if (isPlaying) {
+                Box(
+                    Modifier.align(Alignment.BottomEnd).padding(7.dp)
+                        .size(29.dp).clip(CircleShape)
+                        .background(colors.accent),
+                    contentAlignment = Alignment.Center
+                ) {
+                    PlayingBars(Modifier.size(width = 15.dp, height = 16.dp), tint = colors.background)
+                }
+            }
+        }
+        Text(
+            track.title,
+            color = colors.text,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Text(
+            track.artist,
+            color = colors.muted,
+            fontSize = 10.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
