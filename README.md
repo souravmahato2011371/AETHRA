@@ -1,6 +1,7 @@
 # AETHRA Music
 
-**AETHRA — Music Without Limits.**
+**AETHRA — Music Without Limits.**  
+Current app version: **1.6.3**.
 
 AETHRA is an Android music player with on-device audio playback and YouTube music-video discovery.
 
@@ -23,6 +24,12 @@ AETHRA uses the official YouTube Data API v3 search endpoint for video metadata,
 The YouTube Data API does not return direct audio-stream URLs and does not grant rights to redistribute or stream commercial recordings inside AETHRA. Search results therefore open through YouTube rather than being falsely presented as direct in-app audio streams.
 
 The API key is injected at build time from the `YOUTUBE_API_KEY` Gradle property or environment variable. For GitHub Actions builds, configure a repository Actions secret named `YOUTUBE_API_KEY`. Restrict the Google key to the YouTube Data API and appropriate application/API usage. A key embedded in an APK is extractable; build-time injection is not a substitute for a backend proxy or proper key restrictions.
+
+## Interface and experience
+
+AETHRA includes three visual styles with light and dark palettes. Liquid Glass uses translucent layered surfaces, luminous edges, slow ambient light fields, animated optical accents, and responsive player artwork. Navigation uses a compact animated dock; the mini-player shows live progress and quick transport controls; the full-screen player adapts its artwork and controls to available screen space. Motion is concentrated on active elements and key transitions to keep long music lists responsive.
+
+Discovery includes quick genre shortcuts and keyboard search. Library rows identify the active track, show artwork and duration, and provide direct liked-music controls.
 
 ## Android implementation
 
