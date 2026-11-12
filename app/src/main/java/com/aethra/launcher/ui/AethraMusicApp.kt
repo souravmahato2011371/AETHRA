@@ -22,6 +22,9 @@ import android.provider.MediaStore
 import android.util.LruCache
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.URLEncoder
+import org.json.JSONObject
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
@@ -887,12 +890,31 @@ private fun SearchScreen(
     onToggleLike: (Track) -> Unit
 ) {
     val colors = LocalAethraColors.current
+    var onlineTracks by remember { mutableStateOf(emptyList<Track>()) }
+    var onlineLoading by remember { mutableStateOf(false) }
+    var onlineFailed by remember { mutableStateOf(false) }
+
+    LaunchedEffect(query) {
+        onlineTracks = emptyList()
+        onlineFailed = false
+        if (query.isBlank()) {
+            onlineLoading = false
+        } else {
+            onlineLoading = true
+            delay(500)
+            val result = withContext(Dispatchers.IO) { searchFreeMusicApi(query.trim()) }
+            onlineTracks = result
+            onlineFailed = result.isEmpty()
+            onlineLoading = false
+        }
+    }
+
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Text("Your music", color = colors.text, style = MaterialTheme.typography.headlineLarge, fontSize = 34.sp)
-        Text("Search songs already stored on this device.", color = colors.muted, fontSize = 13.sp, lineHeight = 19.sp)
+        Text("Search your device and the online catalogue.", color = colors.muted, fontSize = 13.sp, lineHeight = 19.sp)
         OutlinedTextField(
             value = query,
             onValueChange = onQueryChange,
@@ -911,11 +933,31 @@ private fun SearchScreen(
                 unfocusedContainerColor = colors.surface
             )
         )
+        SectionHeading("ONLINE DISCOVERY", if (onlineLoading) "SEARCHING…" else "${onlineTracks.size} RESULTS")
+        when {
+            query.isBlank() -> EmptyState("FIND SOMETHING NEW", "Search for a song, artist or album to discover online results.")
+            onlineLoading -> Text("Searching the music catalogue…", color = colors.muted, fontSize = 12.sp)
+            onlineTracks.isNotEmpty() -> onlineTracks.forEach { track ->
+                TrackRow(
+                    track,
+                    liked.contains(track.stableKey),
+                    { onPlayTrack(track) },
+                    { onToggleLike(track) },
+                    activeTrackKey == track.stableKey
+                )
+            }
+            onlineFailed -> Text(
+                "Online search is unavailable right now. This third-party API is deprecated and may be offline.",
+                color = colors.muted,
+                fontSize = 11.sp,
+                lineHeight = 16.sp
+            )
+        }
         SectionHeading("ON THIS DEVICE", tracks.size.toString() + " MATCHES")
         if (tracks.isEmpty()) {
             EmptyState(
                 if (query.isBlank()) "YOUR LIBRARY IS EMPTY" else "NO LOCAL MATCHES",
-                if (query.isBlank()) "Audio stored on this device will appear here after music access is allowed." else "Try another title, artist or album. Search currently covers your local music library."
+                if (query.isBlank()) "Audio stored on this device will appear here after music access is allowed." else "No local match. Your device library remains separate from online results."
             )
         } else {
             tracks.take(100).forEach { track ->
@@ -1755,6 +1797,64 @@ private fun EmptyState(title: String, message: String) {
             Text(title, color = colors.accent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
             Text(message, color = colors.text, fontSize = 13.sp, lineHeight = 19.sp)
         }
+    }
+}
+
+
+private fun searchFreeMusicApi(query: String): List<Track> {
+    val engines = listOf("seevn", "hunjama", "mtmusic", "wunk", "gaama")
+    for (engine in engines) {
+        try {
+            val encodedQuery = URLEncoder.encode(query, "UTF-8")
+            val search = freeMusicApiGet(
+                "https://musicapi.x007.workers.dev/search?q=$encodedQuery&searchEngine=$engine"
+            )
+            val items = search.optJSONArray("response") ?: continue
+            val resolved = mutableListOf<Track>()
+            for (index in 0 until minOf(items.length(), 8)) {
+                val item = items.optJSONObject(index) ?: continue
+                val remoteId = item.optString("id").takeIf { it.isNotBlank() } ?: continue
+                val title = item.optString("title").takeIf { it.isNotBlank() } ?: continue
+                val artwork = item.optString("img").takeIf { it.startsWith("https://") || it.startsWith("http://") }
+                val fetched = freeMusicApiGet(
+                    "https://musicapi.x007.workers.dev/fetch?id=" + URLEncoder.encode(remoteId, "UTF-8")
+                )
+                val streamUrl = fetched.optString("response")
+                if (!streamUrl.startsWith("https://") && !streamUrl.startsWith("http://")) continue
+                resolved += Track(
+                    id = remoteId.hashCode().toLong(),
+                    title = title,
+                    artist = "Online music",
+                    album = "Free Music API",
+                    duration = 0L,
+                    uri = Uri.parse(streamUrl),
+                    source = "FREE_API",
+                    artworkUrl = artwork
+                )
+            }
+            if (resolved.isNotEmpty()) return resolved
+        } catch (_: Exception) {
+            // Try the next supported engine when this unofficial endpoint is unavailable.
+        }
+    }
+    return emptyList()
+}
+
+private fun freeMusicApiGet(endpoint: String): JSONObject {
+    val connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
+        requestMethod = "GET"
+        connectTimeout = 7000
+        readTimeout = 9000
+        setRequestProperty("Accept", "application/json")
+        setRequestProperty("User-Agent", "AETHRA-Music/1.0")
+    }
+    return try {
+        if (connection.responseCode !in 200..299) {
+            throw IllegalStateException("Music API returned HTTP ${connection.responseCode}")
+        }
+        connection.inputStream.bufferedReader(Charsets.UTF_8).use { JSONObject(it.readText()) }
+    } finally {
+        connection.disconnect()
     }
 }
 
