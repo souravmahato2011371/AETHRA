@@ -15,7 +15,7 @@ data class OnlineTrack(
     val artist: String,
     val album: String,
     val durationSeconds: Long,
-    val streamUrl: String,
+    val watchUrl: String,
     val artworkUrl: String?,
     val shareUrl: String?,
     val licenseUrl: String?
@@ -92,7 +92,7 @@ object YouTubeDataCatalog {
                             artist = snippet.optString("channelTitle").ifBlank { "YouTube creator" },
                             album = "YouTube",
                             durationSeconds = 0L,
-                            streamUrl = watchUrl,
+                            watchUrl = watchUrl,
                             artworkUrl = artwork,
                             shareUrl = watchUrl,
                             licenseUrl = null
