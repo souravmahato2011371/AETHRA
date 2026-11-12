@@ -86,44 +86,71 @@ private fun PremiumAtmosphere() {
  */
 @Composable
 private fun GlassAtmosphere() {
+    // One shared, slow-moving light field keeps the whole screen alive without
+    // starting a separate infinite animation for every card in a long list.
     val transition = rememberInfiniteTransition(label = "aethra-glass-atmosphere")
     val phase by transition.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(18000), repeatMode = RepeatMode.Reverse),
+        animationSpec = infiniteRepeatable(tween(22000), repeatMode = RepeatMode.Reverse),
         label = "glass-phase"
+    )
+    val sweep by transition.animateFloat(
+        initialValue = -0.35f,
+        targetValue = 1.35f,
+        animationSpec = infiniteRepeatable(tween(26000), repeatMode = RepeatMode.Restart),
+        label = "glass-light-sweep"
     )
     Canvas(Modifier.fillMaxSize()) {
         val w = size.width
         val h = size.height
-        val first = Offset(w * (0.08f + phase * 0.24f), h * (0.16f + phase * 0.08f))
-        val second = Offset(w * (0.90f - phase * 0.22f), h * (0.64f - phase * 0.10f))
-        val third = Offset(w * (0.52f + phase * 0.10f), h * 0.98f)
+        val first = Offset(w * (0.06f + phase * 0.28f), h * (0.12f + phase * 0.10f))
+        val second = Offset(w * (0.93f - phase * 0.26f), h * (0.62f - phase * 0.12f))
+        val third = Offset(w * (0.50f + phase * 0.14f), h * 1.02f)
         drawRect(Color(0xFF071326))
+        drawRect(
+            Brush.linearGradient(
+                colors = listOf(Color(0xFF142B4B), Color(0xFF0B1930), Color(0xFF0A1425)),
+                start = Offset.Zero,
+                end = Offset(w, h)
+            )
+        )
         drawCircle(
             Brush.radialGradient(
-                listOf(Color(0xFF9FC5FF).copy(alpha = 0.42f), Color(0xFF5479C7).copy(alpha = 0.16f), Color.Transparent),
+                listOf(Color(0xFFB8D7FF).copy(alpha = 0.40f), Color(0xFF668DCF).copy(alpha = 0.17f), Color.Transparent),
                 center = first,
-                radius = w * 0.70f
-            ), w * 0.70f, first
+                radius = w * 0.76f
+            ), w * 0.76f, first
         )
         drawCircle(
             Brush.radialGradient(
-                listOf(Color(0xFF65E2E0).copy(alpha = 0.29f), Color(0xFF3F75AA).copy(alpha = 0.10f), Color.Transparent),
+                listOf(Color(0xFF78E6E2).copy(alpha = 0.25f), Color(0xFF3F75AA).copy(alpha = 0.09f), Color.Transparent),
                 center = second,
-                radius = w * 0.58f
-            ), w * 0.58f, second
+                radius = w * 0.66f
+            ), w * 0.66f, second
         )
         drawCircle(
             Brush.radialGradient(
-                listOf(Color(0xFF9C8BFF).copy(alpha = 0.16f), Color.Transparent),
+                listOf(Color(0xFF9C8BFF).copy(alpha = 0.17f), Color(0xFF647EBE).copy(alpha = 0.06f), Color.Transparent),
                 center = third,
-                radius = w * 0.48f
-            ), w * 0.48f, third
+                radius = w * 0.52f
+            ), w * 0.52f, third
+        )
+        val sweepX = w * sweep
+        drawRect(
+            Brush.linearGradient(
+                0f to Color.Transparent,
+                0.46f to Color.White.copy(alpha = 0.012f),
+                0.50f to Color.White.copy(alpha = 0.045f),
+                0.54f to Color.White.copy(alpha = 0.012f),
+                1f to Color.Transparent,
+                start = Offset(sweepX - w * 0.38f, 0f),
+                end = Offset(sweepX + w * 0.38f, h)
+            )
         )
         drawRect(
             Brush.verticalGradient(
-                listOf(Color.White.copy(alpha = 0.035f), Color.Transparent, Color.Black.copy(alpha = 0.18f))
+                listOf(Color.White.copy(alpha = 0.045f), Color.Transparent, Color.Black.copy(alpha = 0.22f))
             )
         )
     }
@@ -189,13 +216,6 @@ fun AethraSurfaceCard(
     colors: AethraColors,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val glassMotion = rememberInfiniteTransition(label = "aethra-glass-surface-motion")
-    val specularPosition by glassMotion.animateFloat(
-        initialValue = -0.65f,
-        targetValue = 1.65f,
-        animationSpec = infiniteRepeatable(tween(7200), repeatMode = RepeatMode.Restart),
-        label = "glass-specular-position"
-    )
     val shape = RoundedCornerShape(
         when {
             colors.sharp -> 2.dp
@@ -222,7 +242,7 @@ fun AethraSurfaceCard(
 
     Column(
         modifier.then(hardShadow)
-            .then(if (colors.glass) Modifier.shadow(22.dp, shape, clip = false) else Modifier)
+            .then(if (colors.glass) Modifier.shadow(16.dp, shape, clip = false) else Modifier)
             .clip(shape).background(fill)
             .then(if (colors.glass) Modifier.drawBehind {
                 val stroke = 1.dp.toPx()
@@ -255,17 +275,13 @@ fun AethraSurfaceCard(
                     radius = size.width * 0.62f,
                     center = Offset(size.width * 0.12f, 0f)
                 )
-                val glintX = size.width * specularPosition
-                drawRect(
-                    Brush.linearGradient(
-                        0f to Color.Transparent,
-                        0.42f to Color.White.copy(alpha = 0.015f),
-                        0.5f to Color.White.copy(alpha = 0.12f),
-                        0.58f to Color.White.copy(alpha = 0.015f),
-                        1f to Color.Transparent,
-                        start = Offset(glintX - size.width * 0.34f, 0f),
-                        end = Offset(glintX + size.width * 0.34f, size.height)
-                    )
+                // Static specular ribbon; motion is reserved for the hero and player
+                // so a long library list remains smooth on mid-range devices.
+                drawLine(
+                    Color.White.copy(alpha = 0.18f),
+                    Offset(size.width * 0.30f, 1.5.dp.toPx()),
+                    Offset(size.width * 0.72f, 1.5.dp.toPx()),
+                    1.dp.toPx()
                 )
                 drawRoundRect(
                     Color.White.copy(alpha = 0.16f),
