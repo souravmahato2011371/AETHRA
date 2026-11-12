@@ -13,11 +13,6 @@ android {
         targetSdk = 36
         versionCode = 13
         versionName = "1.6.4"
-        val youtubeApiKey = providers.gradleProperty("YOUTUBE_API_KEY")
-            .orElse(providers.environmentVariable("YOUTUBE_API_KEY"))
-            .orElse("")
-            .get()
-        buildConfigField("String", "YOUTUBE_API_KEY", "\"$youtubeApiKey\"")
     }
 
     buildFeatures {
