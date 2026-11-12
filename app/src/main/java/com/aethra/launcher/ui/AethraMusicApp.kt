@@ -57,6 +57,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -87,6 +88,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -925,6 +927,8 @@ private fun SearchScreen(
             onValueChange = onQueryChange,
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { searchOnline(query) }),
             placeholder = { Text("Track, artist, album or genre", color = colors.muted) },
             leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null, tint = colors.muted) },
             shape = RoundedCornerShape(if (colors.sharp) 3.dp else if (colors.glass) 24.dp else 16.dp),
@@ -1018,7 +1022,7 @@ private fun LibraryScreen(
         if (tracks.isEmpty()) {
             EmptyState("NOTHING SAVED YET", "Tap the heart beside a track to keep it in your library.")
         } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(7.dp), contentPadding = PaddingValues(bottom = 18.dp)) {
+            LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp), contentPadding = PaddingValues(bottom = 18.dp)) {
                 items(tracks, key = { it.stableKey }) { track ->
                     TrackRow(track, true, { onPlayTrack(track) }, { onToggleLike(track) }, activeTrackKey == track.stableKey)
                 }
@@ -1592,80 +1596,180 @@ private fun extractArtwork(context: Context, track: Track): Bitmap? {
 @Composable
 private fun HeroPanel(count: Int, onShuffle: () -> Unit) {
     val colors = LocalAethraColors.current
-    val shape = RoundedCornerShape(if (colors.sharp) 3.dp else if (colors.glass) 30.dp else 20.dp)
+    val shape = RoundedCornerShape(if (colors.sharp) 3.dp else if (colors.glass) 32.dp else 22.dp)
     var heroSize by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
+    val motion = rememberInfiniteTransition(label = "aethra-hero-motion")
+    val orbit by motion.animateFloat(
+        initialValue = -0.16f,
+        targetValue = 0.16f,
+        animationSpec = infiniteRepeatable(tween(6800), repeatMode = RepeatMode.Reverse),
+        label = "hero-orbit"
+    )
+    val sheen by motion.animateFloat(
+        initialValue = -0.55f,
+        targetValue = 1.45f,
+        animationSpec = infiniteRepeatable(tween(7800), repeatMode = RepeatMode.Restart),
+        label = "hero-sheen"
+    )
     Box(
         Modifier.fillMaxWidth()
-            .height(198.dp)
+            .height(214.dp)
+            .then(if (colors.glass) Modifier.shadow(26.dp, shape, clip = false) else Modifier)
             .onSizeChanged { heroSize = it }
             .then(
                 if (colors.glass && heroSize.width > 0 && heroSize.height > 0) {
                     Modifier.liquidGlass(
-                        lensCenter = androidx.compose.ui.geometry.Offset(heroSize.width * 0.82f, heroSize.height * 0.5f),
-                        lensSize = androidx.compose.ui.geometry.Size(heroSize.width * 0.22f, heroSize.height * 0.58f),
-                        cornerRadius = heroSize.height * 0.29f,
-                        refraction = 0.16f,
-                        curve = 0.24f,
-                        dispersion = 0.008f,
-                        saturation = 1.14f,
-                        contrast = 1.10f,
-                        edge = 0.62f
+                        lensCenter = androidx.compose.ui.geometry.Offset(heroSize.width * (0.80f + orbit * 0.12f), heroSize.height * 0.48f),
+                        lensSize = androidx.compose.ui.geometry.Size(heroSize.width * 0.31f, heroSize.height * 0.72f),
+                        cornerRadius = heroSize.height * 0.30f,
+                        refraction = 0.22f,
+                        curve = 0.28f,
+                        dispersion = 0.012f,
+                        saturation = 1.18f,
+                        contrast = 1.12f,
+                        edge = 0.72f
                     )
                 } else Modifier
             )
             .clip(shape)
             .then(
-                if (colors.sharp) Modifier.background(colors.raised)
-                else Modifier.background(Brush.linearGradient(listOf(colors.accent, colors.accentSecondary, colors.raised)))
+                when {
+                    colors.glass -> Modifier.background(
+                        Brush.linearGradient(listOf(Color(0xFF14294A), Color(0xFF314F7B), Color(0xFF173B57), Color(0xFF101D36)))
+                    )
+                    colors.sharp -> Modifier.background(colors.raised)
+                    else -> Modifier.background(Brush.linearGradient(listOf(colors.accent, colors.accentSecondary, colors.raised)))
+                }
             )
-            .then(if (colors.sharp) Modifier.border(2.dp, colors.text, shape) else Modifier)
+            .then(
+                if (colors.glass) Modifier.border(
+                    1.dp,
+                    Brush.linearGradient(listOf(Color.White.copy(alpha = 0.78f), Color.White.copy(alpha = 0.12f), Color(0xFF9DCBFF).copy(alpha = 0.42f))),
+                    shape
+                ) else if (colors.sharp) Modifier.border(2.dp, colors.text, shape) else Modifier
+            )
     ) {
         Canvas(Modifier.fillMaxSize()) {
-            if (colors.sharp) {
-                drawRect(colors.accent, topLeft = androidx.compose.ui.geometry.Offset.Zero, size = androidx.compose.ui.geometry.Size(size.width * 0.48f, size.height))
-                drawRect(colors.accentSecondary, topLeft = androidx.compose.ui.geometry.Offset(size.width * 0.48f, 0f), size = androidx.compose.ui.geometry.Size(size.width * 0.52f, size.height * 0.66f))
-                drawRect(colors.text, topLeft = androidx.compose.ui.geometry.Offset(size.width * 0.72f, size.height * 0.66f), size = androidx.compose.ui.geometry.Size(size.width * 0.28f, size.height * 0.34f))
+            val w = size.width
+            val h = size.height
+            if (colors.glass) {
+                val center = androidx.compose.ui.geometry.Offset(w * (0.80f + orbit * 0.16f), h * 0.43f)
+                drawCircle(
+                    Brush.radialGradient(
+                        listOf(Color(0xFFB9E5FF).copy(alpha = 0.42f), Color(0xFF7CB9E7).copy(alpha = 0.13f), Color.Transparent),
+                        center = center,
+                        radius = w * 0.62f
+                    ),
+                    radius = w * 0.62f,
+                    center = center
+                )
+                drawCircle(
+                    Brush.radialGradient(
+                        listOf(Color(0xFF75D9E8).copy(alpha = 0.22f), Color.Transparent),
+                        center = androidx.compose.ui.geometry.Offset(w * 0.12f, h * 0.98f),
+                        radius = w * 0.50f
+                    ),
+                    radius = w * 0.50f,
+                    center = androidx.compose.ui.geometry.Offset(w * 0.12f, h * 0.98f)
+                )
+                drawCircle(
+                    Color.White.copy(alpha = 0.22f),
+                    radius = h * 0.31f,
+                    center = center,
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx())
+                )
+                drawCircle(
+                    Color.White.copy(alpha = 0.12f),
+                    radius = h * 0.42f,
+                    center = center,
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx())
+                )
+                drawArc(
+                    Brush.linearGradient(listOf(Color.Transparent, Color.White.copy(alpha = 0.68f), Color(0xFF8EE8F0).copy(alpha = 0.46f), Color.Transparent)),
+                    startAngle = 205f + sheen * 36f,
+                    sweepAngle = 86f,
+                    useCenter = false,
+                    topLeft = androidx.compose.ui.geometry.Offset(center.x - h * 0.40f, center.y - h * 0.40f),
+                    size = androidx.compose.ui.geometry.Size(h * 0.80f, h * 0.80f),
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx())
+                )
+                val glintX = w * sheen
+                drawRect(
+                    Brush.linearGradient(
+                        0f to Color.Transparent,
+                        0.48f to Color.White.copy(alpha = 0.035f),
+                        0.52f to Color.White.copy(alpha = 0.15f),
+                        0.56f to Color.White.copy(alpha = 0.025f),
+                        1f to Color.Transparent,
+                        start = androidx.compose.ui.geometry.Offset(glintX - w * 0.28f, 0f),
+                        end = androidx.compose.ui.geometry.Offset(glintX + w * 0.28f, h)
+                    )
+                )
+            } else if (colors.sharp) {
+                drawRect(colors.accent, topLeft = androidx.compose.ui.geometry.Offset.Zero, size = androidx.compose.ui.geometry.Size(w * 0.48f, h))
+                drawRect(colors.accentSecondary, topLeft = androidx.compose.ui.geometry.Offset(w * 0.48f, 0f), size = androidx.compose.ui.geometry.Size(w * 0.52f, h * 0.66f))
+                drawRect(colors.text, topLeft = androidx.compose.ui.geometry.Offset(w * 0.72f, h * 0.66f), size = androidx.compose.ui.geometry.Size(w * 0.28f, h * 0.34f))
                 var x = 0f
-                while (x < size.width) {
-                    drawLine(colors.text.copy(alpha = 0.16f), androidx.compose.ui.geometry.Offset(x, 0f), androidx.compose.ui.geometry.Offset(x, size.height), 1.dp.toPx())
+                while (x < w) {
+                    drawLine(colors.text.copy(alpha = 0.16f), androidx.compose.ui.geometry.Offset(x, 0f), androidx.compose.ui.geometry.Offset(x, h), 1.dp.toPx())
                     x += 28.dp.toPx()
                 }
             } else {
-                drawCircle(Color.White.copy(alpha = 0.16f), size.minDimension * 0.48f, androidx.compose.ui.geometry.Offset(size.width * 0.99f, size.height * 0.08f))
-                drawCircle(Color.Black.copy(alpha = 0.08f), size.minDimension * 0.2f, androidx.compose.ui.geometry.Offset(size.width * 0.82f, size.height * 0.9f))
-                if (!colors.glass) {
-                    drawRect(Color.White.copy(alpha = 0.18f), androidx.compose.ui.geometry.Offset(size.width * 0.74f, size.height * 0.52f), androidx.compose.ui.geometry.Size(size.width * 0.17f, size.height * 0.13f))
-                }
+                drawCircle(Color.White.copy(alpha = 0.20f), size.minDimension * 0.48f, androidx.compose.ui.geometry.Offset(w * 0.99f, h * 0.08f))
+                drawCircle(Color.Black.copy(alpha = 0.08f), size.minDimension * 0.2f, androidx.compose.ui.geometry.Offset(w * 0.82f, h * 0.9f))
+                drawRect(
+                    Brush.linearGradient(listOf(Color.White.copy(alpha = 0.12f), Color.Transparent, Color.Black.copy(alpha = 0.06f)))
+                )
             }
         }
         Column(
             Modifier.fillMaxSize().padding(20.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Text("AETHRA  /  YOUR MUSIC", color = Color.White.copy(alpha = 0.8f), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp)
-            Column {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                Box(Modifier.size(6.dp).clip(CircleShape).background(if (colors.glass) Color(0xFFB7F5F2) else Color.White))
+                Text("AETHRA  /  YOUR MUSIC", color = Color.White.copy(alpha = 0.84f), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp)
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Text(
-                    if (colors.glass) "Sound in motion." else if (colors.sharp) "MAKE\nROOM FOR\nMUSIC." else "Made for\nlistening.",
+                    if (colors.glass) "Sound in
+motion." else if (colors.sharp) "MAKE\nROOM FOR\nMUSIC." else "Made for\nlistening.",
                     color = if (colors.sharp) Color(0xFF171717) else Color.White,
                     fontSize = 31.sp,
                     lineHeight = 33.sp,
                     fontWeight = FontWeight.Black,
                     letterSpacing = (-0.8).sp
                 )
-                Text(if (colors.sharp) "A NEW SOUND IS OUT THERE" else count.toString() + " TRACKS IN YOUR LIBRARY", color = if (colors.sharp) Color(0xFF171717) else Color.White.copy(alpha = 0.8f), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
+                Text(
+                    if (count > 0) "$count TRACKS IN YOUR LIBRARY" else "YOUR PERSONAL SOUND SPACE",
+                    color = if (colors.sharp) Color(0xFF171717) else Color.White.copy(alpha = 0.82f),
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.1.sp
+                )
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Button(
                     onClick = onShuffle,
                     shape = RoundedCornerShape(if (colors.sharp) 2.dp else if (colors.glass) 24.dp else 10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = if (colors.sharp) Color(0xFF171717) else Color.White, contentColor = if (colors.sharp) Color(0xFFFFBD2E) else Color(0xFF141619))
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (colors.sharp) Color(0xFF171717) else Color.White,
+                        contentColor = if (colors.sharp) Color(0xFFFFBD2E) else Color(0xFF14233B)
+                    ),
+                    contentPadding = PaddingValues(horizontal = 15.dp, vertical = 9.dp)
                 ) {
                     Icon(Icons.Rounded.Shuffle, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(7.dp))
-                    Text("SHUFFLE", fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                    Text("SHUFFLE PLAY", fontWeight = FontWeight.Bold, fontSize = 10.sp, letterSpacing = 0.5.sp)
                 }
                 Spacer(Modifier.width(10.dp))
-                Text(if (colors.sharp) "INDEPENDENT SOUND / ZERO AETHRA ADS" else "NO AETHRA ADS", color = if (colors.sharp) Color(0xFF171717) else Color.White.copy(alpha = 0.82f), fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Text(
+                    "NO AETHRA ADS",
+                    color = if (colors.sharp) Color(0xFF171717) else Color.White.copy(alpha = 0.82f),
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
             }
         }
     }
