@@ -2,15 +2,19 @@
 
 **AETHRA — Music Without Limits.**
 
-AETHRA is an Android music player focused on local playback and frictionless online music discovery.
+AETHRA is an Android music player with on-device audio playback and YouTube music-video discovery.
 
 ## Product principles
 
 - No AETHRA account or sign-in.
 - Local music playback using Android MediaStore and Media3.
 - YouTube music-video discovery through the supported YouTube Data API v3.
-- YouTube search results open on YouTube for listening.
+- YouTube search results open on YouTube; they are discovery links, not in-app audio streams.
 - No AETHRA-inserted advertisements.
+
+## Online discovery and playback
+
+AETHRA plays local audio inside the app using Media3. The MediaSession service supports background playback and system media controls. Audio focus is requested for playback and playback pauses appropriately when audio becomes noisy (for example, headphones are unplugged).
 
 ## Online discovery
 
