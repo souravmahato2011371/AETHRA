@@ -20,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -188,6 +189,13 @@ fun AethraSurfaceCard(
     colors: AethraColors,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    val glassMotion = rememberInfiniteTransition(label = "aethra-glass-surface-motion")
+    val specularPosition by glassMotion.animateFloat(
+        initialValue = -0.65f,
+        targetValue = 1.65f,
+        animationSpec = infiniteRepeatable(tween(7200), repeatMode = RepeatMode.Restart),
+        label = "glass-specular-position"
+    )
     val shape = RoundedCornerShape(
         when {
             colors.sharp -> 2.dp
@@ -213,7 +221,9 @@ fun AethraSurfaceCard(
     } else Brush.linearGradient(listOf(colors.surface, colors.surface))
 
     Column(
-        modifier.then(hardShadow).clip(shape).background(fill)
+        modifier.then(hardShadow)
+            .then(if (colors.glass) Modifier.shadow(22.dp, shape, clip = false) else Modifier)
+            .clip(shape).background(fill)
             .then(if (colors.glass) Modifier.drawBehind {
                 val stroke = 1.dp.toPx()
                 drawRoundRect(
@@ -238,12 +248,31 @@ fun AethraSurfaceCard(
                 )
                 drawCircle(
                     Brush.radialGradient(
-                        listOf(Color.White.copy(alpha = 0.12f), Color.Transparent),
+                        listOf(Color.White.copy(alpha = 0.16f), Color.Transparent),
                         center = Offset(size.width * 0.12f, 0f),
                         radius = size.width * 0.62f
                     ),
                     radius = size.width * 0.62f,
                     center = Offset(size.width * 0.12f, 0f)
+                )
+                val glintX = size.width * specularPosition
+                drawRect(
+                    Brush.linearGradient(
+                        0f to Color.Transparent,
+                        0.42f to Color.White.copy(alpha = 0.015f),
+                        0.5f to Color.White.copy(alpha = 0.12f),
+                        0.58f to Color.White.copy(alpha = 0.015f),
+                        1f to Color.Transparent,
+                        start = Offset(glintX - size.width * 0.34f, 0f),
+                        end = Offset(glintX + size.width * 0.34f, size.height)
+                    )
+                )
+                drawRoundRect(
+                    Color.White.copy(alpha = 0.16f),
+                    topLeft = Offset(1.5.dp.toPx(), 1.5.dp.toPx()),
+                    size = Size(size.width - 3.dp.toPx(), size.height - 3.dp.toPx()),
+                    style = Stroke(0.7.dp.toPx()),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(23.dp.toPx())
                 )
             } else Modifier)
             .border(if (colors.sharp) 2.dp else 1.dp,
