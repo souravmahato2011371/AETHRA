@@ -85,6 +85,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -615,12 +616,17 @@ private fun AethraExperience(
                                 .clip(navigationGlassShape)
                                 .cloudy(
                                     sky = liquidSky,
-                                    radius = 10,
-                                    tint = Color(0xFFB9D8FF).copy(alpha = 0.09f),
+                                    radius = 12,
+                                    tint = if (mode == ThemeMode.LIGHT) Color.White.copy(alpha = 0.30f) else Color(0xFFB9D8FF).copy(alpha = 0.10f),
                                     shape = navigationGlassShape
                                 )
-                                .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.12f), Color(0xFF8FB9F4).copy(alpha = 0.045f), Color(0xFF17294C).copy(alpha = 0.22f))))
-                                .border(1.dp, Color.White.copy(alpha = 0.34f), navigationGlassShape)
+                                .background(
+                                    Brush.verticalGradient(
+                                        if (mode == ThemeMode.LIGHT) listOf(Color.White.copy(alpha = 0.78f), Color(0xFFDCEBFA).copy(alpha = 0.68f), Color(0xFFBBD0E8).copy(alpha = 0.30f))
+                                        else listOf(Color.White.copy(alpha = 0.14f), Color(0xFF8FB9F4).copy(alpha = 0.055f), Color(0xFF17294C).copy(alpha = 0.26f))
+                                    )
+                                )
+                                .border(1.dp, if (mode == ThemeMode.LIGHT) Color(0xFF7898BC).copy(alpha = 0.34f) else Color.White.copy(alpha = 0.38f), navigationGlassShape)
                         } else {
                             Modifier.background(colors.background)
                         }
@@ -1140,11 +1146,13 @@ private fun NowPlayingScreen(
         label = "now-playing-aura"
     )
 
+    val isLightGlass = colors.glass && colors.background.luminance() > 0.5f
     BoxWithConstraints(
         Modifier.fillMaxSize().then(
             if (colors.glass) Modifier.background(
                 Brush.linearGradient(
-                    listOf(Color(0xFF071326), Color(0xFF142849), Color(0xFF0A172A), Color(0xFF0A111E))
+                    if (isLightGlass) listOf(Color(0xFFF0F6FD), Color(0xFFDCEBFA), Color(0xFFEAF3FC), Color(0xFFD8E7F7))
+                    else listOf(Color(0xFF071326), Color(0xFF142849), Color(0xFF0A172A), Color(0xFF0A111E))
                 )
             ) else Modifier.background(colors.background)
         )
@@ -1260,7 +1268,7 @@ private fun NowPlayingScreen(
                 onValueChange = { onSeek((it * safeDuration).toLong()) },
                 modifier = Modifier.fillMaxWidth().height(28.dp),
                 colors = SliderDefaults.colors(
-                    thumbColor = Color.White,
+                    thumbColor = if (isLightGlass) colors.accent else Color.White,
                     activeTrackColor = colors.accent,
                     inactiveTrackColor = colors.outline.copy(alpha = 0.62f),
                     activeTickColor = Color.Transparent,
@@ -1626,6 +1634,7 @@ private fun extractArtwork(context: Context, track: Track): Bitmap? {
 @Composable
 private fun HeroPanel(count: Int, onShuffle: () -> Unit) {
     val colors = LocalAethraColors.current
+    val isLightGlass = colors.glass && colors.background.luminance() > 0.5f
     val shape = RoundedCornerShape(if (colors.sharp) 3.dp else if (colors.glass) 32.dp else 22.dp)
     var heroSize by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
     val motion = rememberInfiniteTransition(label = "aethra-hero-motion")
@@ -1665,7 +1674,10 @@ private fun HeroPanel(count: Int, onShuffle: () -> Unit) {
             .then(
                 when {
                     colors.glass -> Modifier.background(
-                        Brush.linearGradient(listOf(Color(0xFF14294A), Color(0xFF314F7B), Color(0xFF173B57), Color(0xFF101D36)))
+                        Brush.linearGradient(
+                            if (isLightGlass) listOf(Color(0xFFE8F3FF), Color(0xFFB9D6F2), Color(0xFFDDF0F5), Color(0xFFC5DDF3))
+                            else listOf(Color(0xFF14294A), Color(0xFF314F7B), Color(0xFF173B57), Color(0xFF101D36))
+                        )
                     )
                     colors.sharp -> Modifier.background(colors.raised)
                     else -> Modifier.background(Brush.linearGradient(listOf(colors.accent, colors.accentSecondary, colors.raised)))
@@ -1758,13 +1770,13 @@ private fun HeroPanel(count: Int, onShuffle: () -> Unit) {
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                 Box(Modifier.size(6.dp).clip(CircleShape).background(if (colors.glass) Color(0xFFB7F5F2) else Color.White))
-                Text("AETHRA  /  YOUR MUSIC", color = Color.White.copy(alpha = 0.84f), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp)
+                Text("AETHRA  /  YOUR MUSIC", color = (if (isLightGlass) Color(0xFF183451) else Color.White).copy(alpha = 0.84f), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp)
             }
             Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Text(
                     if (colors.glass) "Sound in
 motion." else if (colors.sharp) "MAKE\nROOM FOR\nMUSIC." else "Made for\nlistening.",
-                    color = if (colors.sharp) Color(0xFF171717) else Color.White,
+                    color = if (colors.sharp) Color(0xFF171717) else if (isLightGlass) Color(0xFF173451) else Color.White,
                     fontSize = 31.sp,
                     lineHeight = 33.sp,
                     fontWeight = FontWeight.Black,
@@ -1772,7 +1784,7 @@ motion." else if (colors.sharp) "MAKE\nROOM FOR\nMUSIC." else "Made for\nlisteni
                 )
                 Text(
                     if (count > 0) "$count TRACKS IN YOUR LIBRARY" else "YOUR PERSONAL SOUND SPACE",
-                    color = if (colors.sharp) Color(0xFF171717) else Color.White.copy(alpha = 0.82f),
+                    color = if (colors.sharp) Color(0xFF171717) else (if (isLightGlass) Color(0xFF294A6B) else Color.White).copy(alpha = 0.82f),
                     fontSize = 9.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.1.sp
@@ -1783,8 +1795,8 @@ motion." else if (colors.sharp) "MAKE\nROOM FOR\nMUSIC." else "Made for\nlisteni
                     onClick = onShuffle,
                     shape = RoundedCornerShape(if (colors.sharp) 2.dp else if (colors.glass) 24.dp else 10.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (colors.sharp) Color(0xFF171717) else Color.White,
-                        contentColor = if (colors.sharp) Color(0xFFFFBD2E) else Color(0xFF14233B)
+                        containerColor = if (colors.sharp) Color(0xFF171717) else if (isLightGlass) Color(0xFF173451) else Color.White,
+                        contentColor = if (colors.sharp) Color(0xFFFFBD2E) else if (isLightGlass) Color.White else Color(0xFF14233B)
                     ),
                     contentPadding = PaddingValues(horizontal = 15.dp, vertical = 9.dp)
                 ) {
@@ -1795,7 +1807,7 @@ motion." else if (colors.sharp) "MAKE\nROOM FOR\nMUSIC." else "Made for\nlisteni
                 Spacer(Modifier.width(10.dp))
                 Text(
                     "NO AETHRA ADS",
-                    color = if (colors.sharp) Color(0xFF171717) else Color.White.copy(alpha = 0.82f),
+                    color = if (colors.sharp) Color(0xFF171717) else (if (isLightGlass) Color(0xFF294A6B) else Color.White).copy(alpha = 0.82f),
                     fontSize = 8.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp
