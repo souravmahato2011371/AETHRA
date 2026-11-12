@@ -26,6 +26,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
@@ -38,7 +39,7 @@ fun AethraVisualBackdrop(
 ) {
     Box(Modifier.fillMaxSize().background(colors.background)) {
         when (style) {
-            VisualStyle.LIQUID_GLASS -> GlassAtmosphere()
+            VisualStyle.LIQUID_GLASS -> GlassAtmosphere(colors)
             VisualStyle.NEO_CONSTRUCTIVIST_POP -> NcpGridBackdrop(colors)
             VisualStyle.SIGNATURE_PREMIUM -> PremiumAtmosphere()
         }
@@ -85,7 +86,8 @@ private fun PremiumAtmosphere() {
  * interface remains predictable on entry-level GPUs.
  */
 @Composable
-private fun GlassAtmosphere() {
+private fun GlassAtmosphere(colors: AethraColors) {
+    val isLight = colors.background.luminance() > 0.5f
     // One shared, slow-moving light field keeps the whole screen alive without
     // starting a separate infinite animation for every card in a long list.
     val transition = rememberInfiniteTransition(label = "aethra-glass-atmosphere")
@@ -107,31 +109,32 @@ private fun GlassAtmosphere() {
         val first = Offset(w * (0.06f + phase * 0.28f), h * (0.12f + phase * 0.10f))
         val second = Offset(w * (0.93f - phase * 0.26f), h * (0.62f - phase * 0.12f))
         val third = Offset(w * (0.50f + phase * 0.14f), h * 1.02f)
-        drawRect(Color(0xFF071326))
+        drawRect(colors.background)
         drawRect(
             Brush.linearGradient(
-                colors = listOf(Color(0xFF142B4B), Color(0xFF0B1930), Color(0xFF0A1425)),
+                colors = if (isLight) listOf(Color(0xFFEAF3FF), Color(0xFFDCEAF8), Color(0xFFF1F6FC))
+                    else listOf(Color(0xFF142B4B), Color(0xFF0B1930), Color(0xFF0A1425)),
                 start = Offset.Zero,
                 end = Offset(w, h)
             )
         )
         drawCircle(
             Brush.radialGradient(
-                listOf(Color(0xFFB8D7FF).copy(alpha = 0.40f), Color(0xFF668DCF).copy(alpha = 0.17f), Color.Transparent),
+                listOf(Color(0xFFB8D7FF).copy(alpha = if (isLight) 0.36f else 0.40f), Color(0xFF668DCF).copy(alpha = if (isLight) 0.12f else 0.17f), Color.Transparent),
                 center = first,
                 radius = w * 0.76f
             ), w * 0.76f, first
         )
         drawCircle(
             Brush.radialGradient(
-                listOf(Color(0xFF78E6E2).copy(alpha = 0.25f), Color(0xFF3F75AA).copy(alpha = 0.09f), Color.Transparent),
+                listOf(Color(0xFF78E6E2).copy(alpha = if (isLight) 0.23f else 0.25f), Color(0xFF3F75AA).copy(alpha = if (isLight) 0.06f else 0.09f), Color.Transparent),
                 center = second,
                 radius = w * 0.66f
             ), w * 0.66f, second
         )
         drawCircle(
             Brush.radialGradient(
-                listOf(Color(0xFF9C8BFF).copy(alpha = 0.17f), Color(0xFF647EBE).copy(alpha = 0.06f), Color.Transparent),
+                listOf(Color(0xFF9C8BFF).copy(alpha = if (isLight) 0.12f else 0.17f), Color(0xFF647EBE).copy(alpha = if (isLight) 0.04f else 0.06f), Color.Transparent),
                 center = third,
                 radius = w * 0.52f
             ), w * 0.52f, third
@@ -140,9 +143,9 @@ private fun GlassAtmosphere() {
         drawRect(
             Brush.linearGradient(
                 0f to Color.Transparent,
-                0.46f to Color.White.copy(alpha = 0.012f),
-                0.50f to Color.White.copy(alpha = 0.045f),
-                0.54f to Color.White.copy(alpha = 0.012f),
+                0.46f to Color.White.copy(alpha = if (isLight) 0.045f else 0.012f),
+                0.50f to Color.White.copy(alpha = if (isLight) 0.10f else 0.045f),
+                0.54f to Color.White.copy(alpha = if (isLight) 0.045f else 0.012f),
                 1f to Color.Transparent,
                 start = Offset(sweepX - w * 0.38f, 0f),
                 end = Offset(sweepX + w * 0.38f, h)
@@ -150,7 +153,7 @@ private fun GlassAtmosphere() {
         )
         drawRect(
             Brush.verticalGradient(
-                listOf(Color.White.copy(alpha = 0.045f), Color.Transparent, Color.Black.copy(alpha = 0.22f))
+                listOf(Color.White.copy(alpha = if (isLight) 0.16f else 0.045f), Color.Transparent, Color.Black.copy(alpha = if (isLight) 0.045f else 0.22f))
             )
         )
     }
@@ -231,12 +234,13 @@ fun AethraSurfaceCard(
             size = Size((size.width - offset).coerceAtLeast(0f), (size.height - offset).coerceAtLeast(0f))
         )
     } else Modifier
+    val isLightGlass = colors.glass && colors.background.luminance() > 0.5f
     val fill = if (colors.glass) {
         Brush.linearGradient(
-            0f to Color.White.copy(alpha = 0.25f),
-            0.22f to colors.surface.copy(alpha = 0.42f),
-            0.58f to colors.raised.copy(alpha = 0.27f),
-            1f to Color(0xFF9FCBFF).copy(alpha = 0.10f)
+            0f to Color.White.copy(alpha = if (isLightGlass) 0.62f else 0.25f),
+            0.22f to colors.surface.copy(alpha = if (isLightGlass) 0.54f else 0.42f),
+            0.58f to colors.raised.copy(alpha = if (isLightGlass) 0.32f else 0.27f),
+            1f to Color(0xFF9FCBFF).copy(alpha = if (isLightGlass) 0.19f else 0.10f)
         )
     } else Brush.linearGradient(listOf(colors.surface, colors.surface))
 
@@ -248,14 +252,18 @@ fun AethraSurfaceCard(
                 val stroke = 1.dp.toPx()
                 drawRoundRect(
                     Brush.linearGradient(
-                        listOf(Color.White.copy(alpha = 0.68f), Color.White.copy(alpha = 0.10f),
-                            Color(0xFF9CCBFF).copy(alpha = 0.30f), Color.White.copy(alpha = 0.24f))
+                        listOf(
+                            (if (isLightGlass) Color(0xFF6588B0) else Color.White).copy(alpha = if (isLightGlass) 0.34f else 0.68f),
+                            Color.White.copy(alpha = 0.10f),
+                            Color(0xFF9CCBFF).copy(alpha = if (isLightGlass) 0.22f else 0.30f),
+                            Color.White.copy(alpha = 0.24f)
+                        )
                     ),
                     style = Stroke(stroke),
                     cornerRadius = androidx.compose.ui.geometry.CornerRadius(25.dp.toPx())
                 )
                 drawLine(
-                    Color.White.copy(alpha = 0.52f),
+                    (if (isLightGlass) Color(0xFF587CA4) else Color.White).copy(alpha = if (isLightGlass) 0.34f else 0.52f),
                     Offset(20.dp.toPx(), stroke),
                     Offset(size.width - 20.dp.toPx(), stroke),
                     stroke
@@ -268,7 +276,7 @@ fun AethraSurfaceCard(
                 )
                 drawCircle(
                     Brush.radialGradient(
-                        listOf(Color.White.copy(alpha = 0.16f), Color.Transparent),
+                        listOf((if (isLightGlass) Color(0xFF6F97C1) else Color.White).copy(alpha = 0.16f), Color.Transparent),
                         center = Offset(size.width * 0.12f, 0f),
                         radius = size.width * 0.62f
                     ),
@@ -284,7 +292,7 @@ fun AethraSurfaceCard(
                     1.dp.toPx()
                 )
                 drawRoundRect(
-                    Color.White.copy(alpha = 0.16f),
+                    (if (isLightGlass) Color(0xFF587CA4) else Color.White).copy(alpha = 0.16f),
                     topLeft = Offset(1.5.dp.toPx(), 1.5.dp.toPx()),
                     size = Size(size.width - 3.dp.toPx(), size.height - 3.dp.toPx()),
                     style = Stroke(0.7.dp.toPx()),
@@ -292,7 +300,7 @@ fun AethraSurfaceCard(
                 )
             } else Modifier)
             .border(if (colors.sharp) 2.dp else 1.dp,
-                if (colors.glass) Color.White.copy(alpha = 0.34f) else colors.outline.copy(alpha = 0.88f), shape),
+                if (colors.glass) (if (isLightGlass) Color(0xFF6D8FB5).copy(alpha = 0.48f) else Color.White.copy(alpha = 0.34f)) else colors.outline.copy(alpha = 0.88f), shape),
         content = content
     )
 }
