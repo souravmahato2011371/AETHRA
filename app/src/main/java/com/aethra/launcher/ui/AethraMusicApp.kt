@@ -192,7 +192,7 @@ fun AethraMusicApp(controller: MediaController) {
         }
     }
 
-    DisposableEffect(controller, tracks, onlineTracks, playbackQueue) {
+    DisposableEffect(controller, tracks, playbackQueue) {
         val listener = object : androidx.media3.common.Player.Listener {
             override fun onMediaItemTransition(item: MediaItem?, reason: Int) {
                 currentTitle = item?.mediaMetadata?.title?.toString().orEmpty()
@@ -1342,9 +1342,6 @@ private fun TrackRow(
                     track.artist,
                     color = colors.muted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
                 )
-                if (track.source == "YOUTUBE_VIDEO") {
-                    Text("VIDEO", color = colors.accentSecondary, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.5.sp)
-                }
                 if (isPlaying) {
                     Box(Modifier.size(5.dp).clip(CircleShape).background(colors.accent))
                     Text("PLAYING", color = colors.accent, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.7.sp)
@@ -1352,7 +1349,7 @@ private fun TrackRow(
             }
         }
         Text(
-            if (track.source == "YOUTUBE_VIDEO") "VIDEO" else formatTime(track.duration),
+            formatTime(track.duration),
             color = if (isPlaying) colors.accent else colors.muted,
             fontSize = 9.sp,
             fontWeight = if (isPlaying) FontWeight.Bold else FontWeight.Medium
