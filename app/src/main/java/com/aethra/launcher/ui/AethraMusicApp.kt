@@ -773,8 +773,7 @@ private fun HomeScreen(
         }
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("YOUR SOUND, YOUR SPACE.", color = colors.muted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.8.sp)
-            Text("Your music,
-your space.", color = colors.text, style = MaterialTheme.typography.headlineLarge, fontSize = 34.sp, lineHeight = 38.sp)
+            Text("Your music,\nyour space.", color = colors.text, style = MaterialTheme.typography.headlineLarge, fontSize = 34.sp, lineHeight = 38.sp)
         }
         HeroPanel(count = tracks.size, onShuffle = onShuffle)
         if (!audioPermission) {
