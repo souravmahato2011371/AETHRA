@@ -50,6 +50,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -942,6 +943,27 @@ private fun SearchScreen(
                 unfocusedContainerColor = colors.surface
             )
         )
+        Row(
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            listOf("Pop", "Lo-fi", "Rock", "Classical", "Electronic").forEach { genre ->
+                AssistChip(
+                    onClick = {
+                        onQueryChange(genre)
+                        searchOnline(genre)
+                    },
+                    label = { Text(genre, fontSize = 11.sp) },
+                    shape = RoundedCornerShape(18.dp),
+                    colors = AssistChipDefaults.assistChipColors(
+                        containerColor = colors.surface.copy(alpha = if (colors.glass) 0.70f else 1f),
+                        labelColor = colors.text
+                    ),
+                    border = BorderStroke(1.dp, colors.outline.copy(alpha = if (colors.glass) 0.55f else 1f))
+                )
+            }
+        }
         Button(
             onClick = { searchOnline(query) },
             enabled = !loading,
@@ -953,7 +975,7 @@ private fun SearchScreen(
                 CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = if (colors.sharp) Color.White else colors.background)
                 Spacer(Modifier.width(10.dp))
                 Text("SEARCHING…")
-            } else Text("SEARCH ONLINE MUSIC", fontWeight = FontWeight.ExtraBold, letterSpacing = 0.7.sp)
+            } else Text("SEARCH YOUTUBE", fontWeight = FontWeight.ExtraBold, letterSpacing = 0.7.sp)
         }
         if (onlineError.isNotBlank()) {
             AethraCard(Modifier.fillMaxWidth()) {
@@ -1378,13 +1400,18 @@ private fun MiniPlayer(
             }
             Spacer(Modifier.height(7.dp))
             val progress = if (durationMs > 0L) (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f) else 0f
+            val animatedProgress by animateFloatAsState(
+                targetValue = progress,
+                animationSpec = tween(260),
+                label = "mini-player-progress"
+            )
             Box(
-                Modifier.fillMaxWidth().height(if (colors.glass) 2.dp else 2.dp)
+                Modifier.fillMaxWidth().height(2.dp)
                     .clip(CircleShape)
                     .background(colors.muted.copy(alpha = 0.22f))
             ) {
                 Box(
-                    Modifier.fillMaxWidth(progress).fillMaxHeight()
+                    Modifier.fillMaxWidth(animatedProgress).fillMaxHeight()
                         .background(Brush.horizontalGradient(listOf(colors.accent, if (colors.glass) Color(0xFF9FE8F0) else colors.accentSecondary)))
                 )
             }
@@ -1459,9 +1486,12 @@ private fun TrackRow(
             Text(track.title, color = colors.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    if (track.source == "YOUTUBE_VIDEO") "YOUTUBE VIDEO" else track.artist,
+                    track.artist,
                     color = colors.muted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
                 )
+                if (track.source == "YOUTUBE_VIDEO") {
+                    Text("VIDEO", color = colors.accentSecondary, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.5.sp)
+                }
                 if (isPlaying) {
                     Box(Modifier.size(5.dp).clip(CircleShape).background(colors.accent))
                     Text("PLAYING", color = colors.accent, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.7.sp)
