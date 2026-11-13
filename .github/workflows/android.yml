@@ -1,4 +1,4 @@
-name: AETHRA Android Build & Release
+name: macOS Desktop Simulation 27 — Android Build
 
 on:
   push:
@@ -13,7 +13,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: aethra-${{ github.ref }}
+  group: macos-desktop-27-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -68,7 +68,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.app-version.outputs.tag }}
-          name: AETHRA v${{ steps.app-version.outputs.version }}
+          name: macOS Desktop Simulation 27 v${{ steps.app-version.outputs.version }}
           target_commitish: main
           generate_release_notes: true
           make_latest: true
