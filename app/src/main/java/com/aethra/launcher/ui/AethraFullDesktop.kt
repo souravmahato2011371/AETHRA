@@ -531,7 +531,7 @@ private fun AethraNotifications(clock:Long,onClose:()->Unit) {
    Row(verticalAlignment=Alignment.CenterVertically) {Text("Notification Center",color=AWhite,fontSize=21.sp,modifier=Modifier.weight(1f));Icon(Icons.Rounded.Close,null,tint=AWhite,modifier=Modifier.clickable(onClick=onClose))}
    Spacer(Modifier.height(12.dp))
    Text(SimpleDateFormat("EEEE, d MMMM",locale).format(Date(clock)),color=ASecondary,fontSize=11.sp)
-   Text(SimpleDateFormat("h:mm",Locale.getDefault()).format(Date(clock)),color=AWhite,fontSize=49.sp,fontWeight=FontWeight.ExtraLight)
+   Text(SimpleDateFormat("h:mm",locale).format(Date(clock)),color=AWhite,fontSize=49.sp,fontWeight=FontWeight.ExtraLight)
    Spacer(Modifier.height(12.dp));Text("You’re all caught up.",color=AWhite,fontSize=14.sp)
    Text("Android notifications remain protected by the operating system.",color=ASecondary,fontSize=10.sp)
   }
