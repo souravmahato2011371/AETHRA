@@ -61,6 +61,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -274,6 +275,7 @@ private fun GoldenGateWallpaper(modifier: Modifier = Modifier) {
 
 @Composable
 private fun MenuBar(now: Long, battery: Int, onSettings: () -> Unit) {
+    val locale = LocalConfiguration.current.locales[0]
     GlassCard(Modifier.fillMaxWidth(), corner = 21.dp, padding = 9.dp) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(27.dp).clip(RoundedCornerShape(9.dp))
@@ -287,7 +289,7 @@ private fun MenuBar(now: Long, battery: Int, onSettings: () -> Unit) {
             Icon(Icons.Rounded.BatteryFull, null, tint = FG.copy(alpha = .9f), modifier = Modifier.size(15.dp))
             Spacer(Modifier.width(4.dp)); Text("$battery%", color = FG.copy(alpha = .9f), fontSize = 9.sp)
             Spacer(Modifier.width(11.dp))
-            Text(SimpleDateFormat("EEE  d MMM  •  h:mm a", Locale.getDefault()).format(Date(now)),
+            Text(SimpleDateFormat("EEE  d MMM  •  h:mm a", locale).format(Date(now)),
                 color = FG, fontSize = 9.sp, fontWeight = FontWeight.Medium)
             Spacer(Modifier.width(7.dp)); GlassIcon(Icons.Rounded.Settings, "Settings", onSettings, 29.dp)
         }
@@ -296,13 +298,14 @@ private fun MenuBar(now: Long, battery: Int, onSettings: () -> Unit) {
 
 @Composable
 private fun ClockCard(now: Long) {
+    val locale = LocalConfiguration.current.locales[0]
     GlassCard(Modifier.fillMaxWidth(), padding = 15.dp) {
         Icon(Icons.Rounded.CalendarMonth, null, tint = AMBER, modifier = Modifier.size(18.dp))
         Spacer(Modifier.height(5.dp))
-        Text(SimpleDateFormat("EEEE", Locale.getDefault()).format(Date(now)), color = FG.copy(alpha = .72f), fontSize = 10.sp)
-        Text(SimpleDateFormat("d", Locale.getDefault()).format(Date(now)), color = FG, fontSize = 43.sp,
+        Text(SimpleDateFormat("EEEE", locale).format(Date(now)), color = FG.copy(alpha = .72f), fontSize = 10.sp)
+        Text(SimpleDateFormat("d", locale).format(Date(now)), color = FG, fontSize = 43.sp,
             lineHeight = 47.sp, fontWeight = FontWeight.Light)
-        Text(SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(Date(now)), color = FG.copy(alpha = .76f), fontSize = 10.sp)
+        Text(SimpleDateFormat("MMMM yyyy", locale).format(Date(now)), color = FG.copy(alpha = .76f), fontSize = 10.sp)
     }
 }
 
