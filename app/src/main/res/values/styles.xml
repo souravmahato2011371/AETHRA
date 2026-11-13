@@ -3,10 +3,12 @@
     <style name="Theme.Aethra" parent="@android:style/Theme.Material.NoActionBar">
         <item name="android:fontFamily">sans</item>
         <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowActionModeOverlay">true</item>
         <item name="android:windowBackground">@color/launcher_background</item>
-        <item name="android:colorAccent">#B8F05A</item>
+        <item name="android:colorAccent">#FF9A78</item>
+        <item name="android:forceDarkAllowed">false</item>
     </style>
 </resources>
