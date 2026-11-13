@@ -100,7 +100,7 @@ private val desktopApps = listOf(
 fun MacOSDesktopSimulation27() {
  val context= LocalContext.current
  val wide= LocalConfiguration.current.screenWidthDp >= 700
- val prefs= remember(context) { context.getSharedPreferences("macos27_desktop",Context.MODE_PRIVATE) }
+ val prefs= remember(context) { context.getSharedPreferences("aethra_full_desktop",Context.MODE_PRIVATE) }
  var phase by rememberSaveable { mutableStateOf(DesktopPhase.BOOT.name) }
  var bootProgress by remember { mutableFloatStateOf(0f) }
  var clock by remember { mutableLongStateOf(System.currentTimeMillis()) }
