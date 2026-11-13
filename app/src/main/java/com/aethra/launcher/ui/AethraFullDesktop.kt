@@ -10,6 +10,9 @@ import android.os.BatteryManager
 import android.provider.CalendarContract
 import android.provider.ContactsContract
 import android.provider.Settings
+import android.webkit.WebChromeClient
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.animateFloatAsState
@@ -35,6 +38,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,6 +62,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import kotlinx.coroutines.delay
@@ -93,7 +98,10 @@ private val desktopApps = listOf(
  MacOSDesktopApp("reminders","Reminders",Icons.Rounded.Checklist,Color(0xFFFFC56E)),
  MacOSDesktopApp("terminal","Terminal",Icons.Rounded.Code,Color(0xFF91D6B1)),
  MacOSDesktopApp("store","App Store",Icons.Rounded.Store,Color(0xFF75A9FF)),
- MacOSDesktopApp("android","Android Apps",Icons.Rounded.PhoneAndroid,Color(0xFF83D5A9))
+ MacOSDesktopApp("android","Android Apps",Icons.Rounded.PhoneAndroid,Color(0xFF83D5A9)),
+ MacOSDesktopApp("calculator","Calculator",Icons.Rounded.Calculate,Color(0xFFFFA94D)),
+ MacOSDesktopApp("textedit","TextEdit",Icons.Rounded.EditNote,Color(0xFF82B8F4)),
+ MacOSDesktopApp("preview","Preview",Icons.Rounded.PictureAsPdf,Color(0xFFB5B7C8))
 )
 
 @Composable
@@ -114,9 +122,10 @@ fun MacOSDesktopSimulation27() {
  var workspace by rememberSaveable { mutableIntStateOf(1) }
  var windows by remember { mutableStateOf(listOf<DesktopWindow>()) }
  var notes by remember { mutableStateOf(prefs.getString("notes","Welcome to macOS 27.\n\nA new desktop, a new beginning.") ?: "") }
+ var textEdit by remember { mutableStateOf(prefs.getString("textedit","") ?: "") }
  var noteInput by remember { mutableStateOf("") }
  var reminderInput by remember { mutableStateOf("") }
- var reminders by remember { mutableStateOf(listOf<String>()) }
+ var reminders by remember { mutableStateOf(prefs.getStringSet("reminders", emptySet())?.toList() ?: emptyList()) }
  var brightness by rememberSaveable { mutableFloatStateOf(.72f) }
  var wifiPreview by rememberSaveable { mutableStateOf(true) }
  var bluetoothPreview by rememberSaveable { mutableStateOf(false) }
@@ -223,6 +232,9 @@ fun MacOSDesktopSimulation27() {
           "finder" -> FinderContent(context)
           "browser" -> BrowserContent(context)
           "notes" -> NotesContent(notes,{notes=it;prefs.edit().putString("notes",it).apply()})
+          "textedit" -> NotesContent(textEdit,{textEdit=it;prefs.edit().putString("textedit",it).apply()})
+          "calculator" -> CalculatorContent()
+          "preview" -> PreviewContent(context)
           "calendar" -> CalendarContent(context)
           "photos" -> PhotosContent(context)
           "settings" -> SettingsContent(context,wifiPreview,{wifiPreview=it},bluetoothPreview,{bluetoothPreview=it},focusPreview,{focusPreview=it},brightness,{brightness=it})
@@ -230,7 +242,7 @@ fun MacOSDesktopSimulation27() {
           "maps" -> NativeAppContent("Maps","Open a map with Android's map handler.",Icons.Rounded.Map){context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("geo:0,0?q=")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))}
           "clock" -> NativeAppContent("Clock","Your tablet's alarms and timers.",Icons.Rounded.AccessTime){context.startActivity(Intent(android.provider.AlarmClock.ACTION_SHOW_ALARMS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))}
           "contacts" -> NativeAppContent("Contacts","Your contacts remain managed by Android.",Icons.Rounded.Contacts){context.startActivity(Intent(Intent.ACTION_VIEW,ContactsContract.Contacts.CONTENT_URI).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))}
-          "reminders" -> RemindersContent(reminderInput,{reminderInput=it},reminders,{reminders=it})
+          "reminders" -> RemindersContent(reminderInput,{reminderInput=it},reminders,{reminders=it;prefs.edit().putStringSet("reminders",it.toSet()).apply()})
           "terminal" -> TerminalContent()
           "store" -> NativeAppContent("App Store","Browse apps installed through your Android app store.",Icons.Rounded.Store){context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("market://details?id=com.android.chrome")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))}
           "android" -> AndroidAppsContent(installed,::launchDeviceApp)
@@ -660,21 +672,99 @@ private fun FinderContent(context:Context) {
 
 @Composable
 private fun BrowserContent(context:Context) {
- var url by rememberSaveable { mutableStateOf("https://www.apple.com") }
- Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
-  Row(verticalAlignment=Alignment.CenterVertically) {
-   BasicTextField(url,{url=it},Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).background(Color.White.copy(alpha=.1f)).padding(12.dp),singleLine=true,textStyle=TextStyle(color=AWhite,fontSize=11.sp))
-   Spacer(Modifier.width(7.dp))
-   Box(Modifier.clip(CircleShape).background(ABlue).clickable {
-    val target=if(url.startsWith("http://")||url.startsWith("https://"))url else "https://$url"
-    runCatching { context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(target)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-   }.padding(11.dp)){Icon(Icons.Rounded.ArrowForward,null,tint=Color(0xFF10253A),modifier=Modifier.size(16.dp))}
-  }
-  Text("macOS 27 Browser hands web pages to your installed Android browser. A built-in browser engine is not bundled yet.",color=ASecondary,fontSize=10.sp)
-  Row(horizontalArrangement=Arrangement.spacedBy(7.dp)) {
-   listOf("Apple","Wikipedia","OpenAI").forEach { label ->
-    Box(Modifier.clip(CircleShape).background(Color.White.copy(alpha=.1f)).clickable { url=when(label){"Apple"->"https://www.apple.com";"Wikipedia"->"https://www.wikipedia.org";else->"https://www.openai.com"} }.padding(horizontal=12.dp,vertical=8.dp)) {Text(label,color=AWhite,fontSize=9.sp)}
+ var address by rememberSaveable { mutableStateOf("") }
+ var pageProgress by remember { mutableIntStateOf(0) }
+ var pageTitle by remember { mutableStateOf("Start Page") }
+ val webView = remember {
+  WebView(context).apply {
+   settings.javaScriptEnabled = true
+   settings.domStorageEnabled = true
+   settings.safeBrowsingEnabled = true
+   settings.allowFileAccess = false
+   settings.allowContentAccess = true
+   settings.javaScriptCanOpenWindowsAutomatically = false
+   settings.setSupportMultipleWindows(false)
+   settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW
+   webChromeClient = object : WebChromeClient() {
+    override fun onProgressChanged(view:WebView?, newProgress:Int) {
+     pageProgress = newProgress
+     pageTitle = view?.title ?: pageTitle
+    }
    }
+   webViewClient = object : WebViewClient() {
+    override fun onPageStarted(view:WebView?, url:String?, favicon:android.graphics.Bitmap?) {
+     if(url != null) address = url
+     pageProgress = 0
+    }
+    override fun onPageFinished(view:WebView?, url:String?) {
+     if(url != null) address = url
+     pageProgress = 100
+     pageTitle = view?.title ?: pageTitle
+    }
+    override fun shouldOverrideUrlLoading(view:WebView?, request:android.webkit.WebResourceRequest?):Boolean {
+     val uri = request?.url ?: return false
+     val scheme = uri.scheme?.lowercase(Locale.ROOT)
+     if(scheme == "http" || scheme == "https") return false
+     runCatching { context.startActivity(Intent(Intent.ACTION_VIEW,uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+     return true
+    }
+   }
+  }
+ }
+ DisposableEffect(webView) {
+  onDispose {
+   webView.stopLoading()
+   webView.destroy()
+  }
+ }
+ fun navigate() {
+  val raw = address.trim()
+  if(raw.isBlank()) return
+  val target = if(raw.contains("://")) raw else "https://$raw"
+  val uri = Uri.parse(target)
+  if(uri.scheme == "http" || uri.scheme == "https") {
+   runCatching { webView.loadUrl(target) }
+  }
+ }
+ Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+  Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+   Icon(Icons.Rounded.ArrowBack,"Back",tint=if(webView.canGoBack()) AWhite else ASecondary,
+    modifier=Modifier.size(19.dp).clickable(enabled=webView.canGoBack()) { webView.goBack() })
+   Icon(Icons.Rounded.ArrowForward,"Forward",tint=if(webView.canGoForward()) AWhite else ASecondary,
+    modifier=Modifier.size(19.dp).clickable(enabled=webView.canGoForward()) { webView.goForward() })
+   Icon(Icons.Rounded.Refresh,"Reload",tint=AWhite,modifier=Modifier.size(18.dp).clickable {
+    if(webView.url == null) navigate() else webView.reload()
+   })
+   BasicTextField(address,{address=it},Modifier.weight(1f).clip(RoundedCornerShape(10.dp))
+    .background(Color.White.copy(alpha=.11f)).padding(horizontal=10.dp,vertical=10.dp),
+    singleLine=true,textStyle=TextStyle(color=AWhite,fontSize=11.sp),
+    decorationBox={inner->if(address.isEmpty())Text("Search or enter website",color=ASecondary,fontSize=11.sp);inner()})
+   Box(Modifier.clip(CircleShape).background(ABlue).clickable(onClick={navigate()}).padding(10.dp)) {
+    Icon(Icons.Rounded.ArrowForward,null,tint=Color(0xFF10253A),modifier=Modifier.size(15.dp))
+   }
+  }
+  if(pageProgress in 1..99) {
+   Box(Modifier.fillMaxWidth().height(2.dp).clip(CircleShape).background(Color.White.copy(alpha=.12f))) {
+    Box(Modifier.fillMaxHeight().fillMaxWidth(pageProgress/100f).background(ABlue))
+   }
+  }
+  if(webView.url == null) {
+   Column(Modifier.fillMaxWidth().weight(1f).padding(top=25.dp),horizontalAlignment=Alignment.CenterHorizontally,
+    verticalArrangement=Arrangement.spacedBy(12.dp)) {
+    Icon(Icons.Rounded.Language,null,tint=ABlue,modifier=Modifier.size(48.dp))
+    Text("A browser for your desktop",color=AWhite,fontSize=20.sp,fontWeight=FontWeight.Light)
+    Text("Search the web or open a website. Pages render inside this window.",color=ASecondary,fontSize=10.sp,textAlign=TextAlign.Center)
+    Row(horizontalArrangement=Arrangement.spacedBy(7.dp)) {
+     listOf("Apple" to "https://www.apple.com","Wikipedia" to "https://www.wikipedia.org","OpenAI" to "https://www.openai.com").forEach { (label,url) ->
+      Box(Modifier.clip(CircleShape).background(Color.White.copy(alpha=.1f)).clickable { address=url;webView.loadUrl(url) }.padding(horizontal=12.dp,vertical=8.dp)) {
+       Text(label,color=AWhite,fontSize=9.sp)
+      }
+     }
+    }
+   }
+  } else {
+   AndroidView(factory={webView},modifier=Modifier.weight(1f).fillMaxWidth())
+   Text(pageTitle.ifBlank{"Web page"}+"  ·  Android System WebView",color=ASecondary,fontSize=8.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
   }
  }
 }
@@ -683,6 +773,86 @@ private fun BrowserContent(context:Context) {
 private fun NotesContent(notes:String,onNotes:(String)->Unit) {
  BasicTextField(notes,onNotes,Modifier.fillMaxSize().clip(RoundedCornerShape(10.dp)).background(Color(0xFFFCF5D9)).padding(15.dp),
   textStyle=TextStyle(color=Color(0xFF282B31),fontSize=13.sp,lineHeight=20.sp))
+}
+
+
+@Composable
+private fun CalculatorContent() {
+ var display by rememberSaveable { mutableStateOf("0") }
+ var stored by rememberSaveable { mutableDoubleStateOf(0.0) }
+ var operation by rememberSaveable { mutableStateOf<String?>(null) }
+ var replaceDisplay by rememberSaveable { mutableStateOf(true) }
+ fun formatted(value:Double):String {
+  if(!value.isFinite()) return "Error"
+  val clean=if(value==0.0) 0.0 else value
+  return if(clean % 1.0 == 0.0 && kotlin.math.abs(clean) < 1.0e12) clean.toLong().toString() else clean.toString().take(12)
+ }
+ fun press(key:String) {
+  when(key) {
+   "AC" -> {display="0";stored=0.0;operation=null;replaceDisplay=true}
+   "±" -> {display=formatted(-(display.toDoubleOrNull()?:0.0));replaceDisplay=false}
+   "%" -> {display=formatted((display.toDoubleOrNull()?:0.0)/100.0);replaceDisplay=false}
+   "+","−","×","÷" -> {stored=display.toDoubleOrNull()?:0.0;operation=key;replaceDisplay=true}
+   "=" -> {
+    val right=display.toDoubleOrNull()?:0.0
+    val result=when(operation) {
+     "+" -> stored+right
+     "−" -> stored-right
+     "×" -> stored*right
+     "÷" -> if(right==0.0) Double.NaN else stored/right
+     else -> right
+    }
+    display=formatted(result);operation=null;replaceDisplay=true
+   }
+   else -> {
+    if(key=="." && (if(replaceDisplay) "" else display).contains(".")) return
+    display=if(replaceDisplay) {if(key==".")"0." else key} else if(display=="0" && key!=".") key else display+key
+    replaceDisplay=false
+   }
+  }
+ }
+ Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+  Text("Calculator",color=AWhite,fontSize=14.sp)
+  Box(Modifier.fillMaxWidth().weight(.8f).clip(RoundedCornerShape(16.dp)).background(Color(0xFF111A27)).padding(16.dp),contentAlignment=Alignment.BottomEnd) {
+   Text(display,color=AWhite,fontSize=38.sp,fontWeight=FontWeight.Light,maxLines=1)
+  }
+  val keys=listOf(
+   listOf("AC","±","%","÷"),
+   listOf("7","8","9","×"),
+   listOf("4","5","6","−"),
+   listOf("1","2","3","+"),
+   listOf("0",".","=","=")
+  )
+  keys.forEachIndexed { rowIndex,row ->
+   Row(Modifier.weight(1f),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+    row.forEachIndexed { colIndex,key ->
+     if(rowIndex==4 && colIndex==3) Spacer(Modifier.weight(1f))
+     else Box(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(13.dp))
+      .background(when {key in listOf("÷","×","−","+","=")->Color(0xFF397AA0);key=="AC"->Color(0xFF465366);else->Color(0xFF27374B)})
+      .clickable { press(key) },contentAlignment=Alignment.Center) {
+      Text(key,color=AWhite,fontSize=if(key.length>1)14.sp else 19.sp,fontWeight=FontWeight.Medium)
+     }
+    }
+   }
+  }
+ }
+}
+
+@Composable
+private fun PreviewContent(context:Context) {
+ Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+  Icon(Icons.Rounded.PictureAsPdf,null,tint=ABlue,modifier=Modifier.size(48.dp))
+  Text("Preview",color=AWhite,fontSize=24.sp,fontWeight=FontWeight.Light)
+  Text("Open a PDF, image, or document with an Android viewer. The selected file stays in its original location.",color=ASecondary,fontSize=11.sp,lineHeight=16.sp)
+  Box(Modifier.clip(CircleShape).background(ABlue).clickable {
+   runCatching {
+    context.startActivity(Intent(Intent.ACTION_OPEN_DOCUMENT).setType("*/*")
+     .addCategory(Intent.CATEGORY_OPENABLE).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+   }
+  }.padding(horizontal=17.dp,vertical=11.dp)) {
+   Text("Open File",color=Color(0xFF10253A),fontSize=10.sp,fontWeight=FontWeight.Bold)
+  }
+ }
 }
 
 @Composable
