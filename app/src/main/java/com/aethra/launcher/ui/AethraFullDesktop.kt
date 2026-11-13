@@ -287,7 +287,7 @@ private fun AethraBoot(progress:Float) {
 private fun AethraLockScreen(clock:Long,battery:Int,onUnlock:()->Unit) {
  val locale=androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
  val date=remember(clock,locale){SimpleDateFormat("EEEE, d MMMM",locale).format(Date(clock))}
- val time=remember(clock){SimpleDateFormat("h:mm",Locale.getDefault()).format(Date(clock))}
+ val time=remember(clock){SimpleDateFormat("h:mm",locale).format(Date(clock))}
  Box(Modifier.fillMaxSize()) {
   AethraWallpaper(Modifier.fillMaxSize())
   Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x44030A18),Color(0x22030A18),Color(0x99030A18)))))
