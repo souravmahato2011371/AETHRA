@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+
 package com.aethra.launcher.ui
 
 import android.app.role.RoleManager
