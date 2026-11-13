@@ -236,7 +236,7 @@ fun MacSimulatorApp() {
       {openSystemSettings(context,Settings.ACTION_WIFI_SETTINGS)},{openSystemSettings(context,Settings.ACTION_BLUETOOTH_SETTINGS)},
       {openSystemSettings(context,Settings.ACTION_DISPLAY_SETTINGS)},{controlCenter=false})
      if(notificationCenter) NotificationCenter(now,{notificationCenter=false}) {
-      openSystemSettings(context,Settings.ACTION_NOTIFICATION_SETTINGS)
+      openSystemSettings(context,Settings.ACTION_APP_NOTIFICATION_SETTINGS)
      }
      if(spotlight) SpotlightPanel(query,{query=it},simApps,installed,{id->openApp(id)}, {app->launchAndroidApp(app)},{spotlight=false;query=""})
      if(missionControl) MissionControlPanel(recentApps.toList(),{id->openApp(id)},{missionControl=false},{openApp("settings")})
@@ -508,7 +508,7 @@ private fun SettingsApp(wifi:Boolean,onWifi:(Boolean)->Unit,dark:Boolean,onDark:
  Row(verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("Dark appearance",color=SW,fontSize=13.sp);Text("Visual simulator setting only",color=SM,fontSize=9.sp)};Switch(dark,onDark)}
  Text("Android applications",color=SB,fontSize=13.sp,modifier=Modifier.clickable(onClick=onAndroid).padding(vertical=10.dp))
  listOf("Wi-Fi" to Settings.ACTION_WIFI_SETTINGS,"Bluetooth" to Settings.ACTION_BLUETOOTH_SETTINGS,
-  "Display & brightness" to Settings.ACTION_DISPLAY_SETTINGS,"Notifications" to Settings.ACTION_NOTIFICATION_SETTINGS).forEach { (label,action) ->
+  "Display & brightness" to Settings.ACTION_DISPLAY_SETTINGS,"Notifications" to Settings.ACTION_APP_NOTIFICATION_SETTINGS).forEach { (label,action) ->
   Row(Modifier.fillMaxWidth().clickable { openSystemSettings(context,action) }.padding(vertical=9.dp),verticalAlignment=Alignment.CenterVertically) {
    Text(label,color=SW,fontSize=12.sp,modifier=Modifier.weight(1f));Icon(Icons.Rounded.OpenInNew,null,tint=SB,modifier=Modifier.size(15.dp))
   }
@@ -518,7 +518,11 @@ private fun SettingsApp(wifi:Boolean,onWifi:(Boolean)->Unit,dark:Boolean,onDark:
 
 
 private fun openSystemSettings(context:Context, action:String) {
- runCatching { context.startActivity(Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+ runCatching {
+  val intent=Intent(action)
+  if(action==Settings.ACTION_APP_NOTIFICATION_SETTINGS) intent.putExtra(Settings.EXTRA_APP_PACKAGE,context.packageName)
+  context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+ }
 }
 
 @Composable
@@ -598,7 +602,7 @@ private fun NotificationCenter(now:Long,onClose:()->Unit,onAndroidNotifications:
    Text("AETHRA does not read Android notifications. Your device keeps notification access under Android’s control.",color=SM,fontSize=10.sp,lineHeight=15.sp)
    Spacer(Modifier.height(12.dp))
    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color.White.copy(alpha=.1f)).clickable(onClick=onAndroidNotifications).padding(12.dp),verticalAlignment=Alignment.CenterVertically) {
-    Icon(Icons.Rounded.Notifications,null,tint=SB);Spacer(Modifier.width(9.dp));Text("Open Android notification settings",color=SW,fontSize=11.sp,modifier=Modifier.weight(1f));Icon(Icons.Rounded.OpenInNew,null,tint=SM,modifier=Modifier.size(14.dp))
+    Icon(Icons.Rounded.Notifications,null,tint=SB);Spacer(Modifier.width(9.dp));Text("AETHRA notification settings",color=SW,fontSize=11.sp,modifier=Modifier.weight(1f));Icon(Icons.Rounded.OpenInNew,null,tint=SM,modifier=Modifier.size(14.dp))
    }
   }
  }
