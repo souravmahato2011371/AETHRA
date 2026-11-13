@@ -26,7 +26,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enterImmersiveDesktop()
-        setContent { AethraFullDesktop() }
+        setContent { MacOSDesktopSimulation27() }
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
