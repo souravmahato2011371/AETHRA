@@ -5,7 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import com.aethra.launcher.ui.GoldenGateLauncher
+import com.aethra.launcher.ui.MacSimulatorApp
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -19,6 +19,6 @@ class MainActivity : ComponentActivity() {
             window.isNavigationBarContrastEnforced = false
             window.isStatusBarContrastEnforced = false
         }
-        setContent { GoldenGateLauncher() }
+        setContent { MacSimulatorApp() }
     }
 }
