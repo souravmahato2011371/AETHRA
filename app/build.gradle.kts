@@ -11,15 +11,14 @@ android {
         applicationId = "com.aethra.launcher"
         minSdk = 26
         targetSdk = 36
-        versionCode = 13
-        versionName = "1.6.4"
+        versionCode = 14
+        versionName = "1.7.0"
     }
 
     buildFeatures {
         compose = true
         buildConfig = true
     }
-
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -47,6 +46,7 @@ dependencies {
     implementation("com.github.skydoves:cloudy:0.7.1")
     implementation("androidx.compose.material:material-icons-extended")
 
+    // Retained temporarily while legacy playback sources are removed in the cleanup pass.
     implementation("androidx.media3:media3-exoplayer:1.9.0")
     implementation("androidx.media3:media3-exoplayer-hls:1.9.0")
     implementation("androidx.media3:media3-session:1.9.0")
