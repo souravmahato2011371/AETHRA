@@ -587,17 +587,18 @@ private fun ControlTile(
 
 @Composable
 private fun NotificationCenter(now:Long,onClose:()->Unit,onAndroidNotifications:()->Unit) {
+ val locale=LocalConfiguration.current.locales[0]
  Box(Modifier.fillMaxSize().background(Color(0x66020A12)).clickable(onClick=onClose).padding(9.dp),contentAlignment=Alignment.TopEnd) {
   GlassPanel(Modifier.fillMaxWidth(.96f).widthIn(max=380.dp),22.dp,16.dp) {
    Row(verticalAlignment=Alignment.CenterVertically) {
     Column(Modifier.weight(1f)) {
      Text("Notification Center",color=SW,fontSize=21.sp,fontWeight=FontWeight.Light)
-     Text(SimpleDateFormat("EEEE, d MMMM",Locale.getDefault()).format(Date(now)),color=SM,fontSize=10.sp)
+     Text(SimpleDateFormat("EEEE, d MMMM",locale).format(Date(now)),color=SM,fontSize=10.sp)
     }
     Icon(Icons.Rounded.Close,"Close",tint=SW,modifier=Modifier.size(22.dp).clickable(onClick=onClose))
    }
    Spacer(Modifier.height(15.dp))
-   Text(SimpleDateFormat("h:mm",Locale.getDefault()).format(Date(now)),color=SW,fontSize=48.sp,fontWeight=FontWeight.ExtraLight)
+   Text(SimpleDateFormat("h:mm",locale).format(Date(now)),color=SW,fontSize=48.sp,fontWeight=FontWeight.ExtraLight)
    Text("You’re all caught up",color=SW,fontSize=14.sp,fontWeight=FontWeight.Medium)
    Text("AETHRA does not read Android notifications. Your device keeps notification access under Android’s control.",color=SM,fontSize=10.sp,lineHeight=15.sp)
    Spacer(Modifier.height(12.dp))
