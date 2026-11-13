@@ -151,7 +151,7 @@ fun AethraFullDesktop() {
  fun openApp(id:String) {
   val old=windows.firstOrNull { it.id==id }
   val next=if(old==null) windows+DesktopWindow(id,desktopApps.firstOrNull{it.id==id}?.title ?: id.replaceFirstChar{it.uppercase()},if(wide)180f else 18f,if(wide)90f else 70f,workspace)
-   else { workspace=old.workspace; windows.map { if(it.id==id) it.copy(minimized=false) else it } }
+   else { workspace=old.workspace; windows.filterNot { it.id==id } + old.copy(minimized=false) }
   windows=next
   frontWindow=id
   launchpad=false;spotlight=false;missionControl=false;controlCenter=false;notificationCenter=false
@@ -181,7 +181,9 @@ fun AethraFullDesktop() {
   val maxH=maxHeight
   when(phase) {
    DesktopPhase.BOOT.name -> AethraBoot(bootProgress)
-   DesktopPhase.LOCK.name -> AethraLockScreen(clock,battery) { phase=DesktopPhase.DESKTOP.name }
+   DesktopPhase.LOCK.name -> AethraLockScreen(clock,battery,{ phase=DesktopPhase.DESKTOP.name },{
+    runCatching { context.startActivity(Intent(Settings.ACTION_HOME_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+   })
    else -> {
     AethraWallpaper(Modifier.fillMaxSize())
     Column(Modifier.fillMaxSize()) {
@@ -210,7 +212,7 @@ fun AethraFullDesktop() {
        key(win.id) {
         AethraWindow(
          win=win,front=frontWindow==win.id,screenW=maxW,screenH=maxH,wide=wide,
-         onFocus={frontWindow=win.id},
+         onFocus={windows=windows.filterNot{it.id==win.id}+win;frontWindow=win.id},
          onMove={dx,dy->windows=windows.map{if(it.id==win.id)it.copy(x=(it.x+dx).coerceIn(0f,(maxW.value-260f).coerceAtLeast(0f)),y=(it.y+dy).coerceIn(0f,(maxH.value-170f).coerceAtLeast(0f)))else it}},
          onMinimize={windows=windows.map{if(it.id==win.id)it.copy(minimized=true)else it}},
          onMaximize={windows=windows.map{if(it.id==win.id)it.copy(maximized=!it.maximized)else it}},
@@ -284,7 +286,7 @@ private fun AethraBoot(progress:Float) {
 }
 
 @Composable
-private fun AethraLockScreen(clock:Long,battery:Int,onUnlock:()->Unit) {
+private fun AethraLockScreen(clock:Long,battery:Int,onUnlock:()->Unit,onSetHome:()->Unit) {
  val locale=androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
  val date=remember(clock,locale){SimpleDateFormat("EEEE, d MMMM",locale).format(Date(clock))}
  val time=remember(clock){SimpleDateFormat("h:mm",locale).format(Date(clock))}
@@ -306,6 +308,9 @@ private fun AethraLockScreen(clock:Long,battery:Int,onUnlock:()->Unit) {
     .clickable(onClick=onUnlock).padding(horizontal=25.dp,vertical=12.dp)) {
     Text("Unlock",color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Medium)
    }
+   Spacer(Modifier.height(13.dp))
+   Text("Set AETHRA as your default Home app",color=Color.White.copy(alpha=.82f),fontSize=10.sp,
+    modifier=Modifier.clickable(onClick=onSetHome))
   }
   Row(Modifier.align(Alignment.BottomCenter).padding(26.dp),verticalAlignment=Alignment.CenterVertically) {
    Icon(Icons.Rounded.BatteryFull,null,tint=Color.White.copy(alpha=.8f),modifier=Modifier.size(15.dp))
