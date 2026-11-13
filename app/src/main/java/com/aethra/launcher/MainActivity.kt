@@ -6,7 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import com.aethra.launcher.ui.AethraFullDesktop
+import com.aethra.launcher.ui.MacOSDesktopSimulation27
 
 class MainActivity : ComponentActivity() {
     private fun enterImmersiveDesktop() {
