@@ -75,32 +75,32 @@ private val AGlass = Color(0xD91B2638)
 private val AStroke = Color(0x40FFFFFF)
 
 private enum class DesktopPhase { BOOT, LOCK, DESKTOP }
-private data class AethraDesktopApp(val id:String,val title:String,val icon:androidx.compose.ui.graphics.vector.ImageVector,val tint:Color)
+private data class MacOSDesktopApp(val id:String,val title:String,val icon:androidx.compose.ui.graphics.vector.ImageVector,val tint:Color)
 private data class DeviceApp(val title:String,val packageName:String,val activity:String,val icon:Drawable)
 private data class DesktopWindow(val id:String,val title:String,val x:Float,val y:Float,val workspace:Int,val minimized:Boolean=false,val maximized:Boolean=false)
 
 private val desktopApps = listOf(
- AethraDesktopApp("finder","Finder",Icons.Rounded.Folder,Color(0xFF68BDF4)),
- AethraDesktopApp("browser","Safari",Icons.Rounded.Language,Color(0xFF5DCBE8)),
- AethraDesktopApp("notes","Notes",Icons.Rounded.Notes,Color(0xFFFFD66B)),
- AethraDesktopApp("calendar","Calendar",Icons.Rounded.CalendarMonth,Color(0xFFFF777C)),
- AethraDesktopApp("photos","Photos",Icons.Rounded.PhotoLibrary,Color(0xFFCB8CF4)),
- AethraDesktopApp("settings","System Settings",Icons.Rounded.Settings,Color(0xFFAAB8C8)),
- AethraDesktopApp("mail","Mail",Icons.Rounded.Mail,Color(0xFF75BCEB)),
- AethraDesktopApp("maps","Maps",Icons.Rounded.Map,Color(0xFF73C99C)),
- AethraDesktopApp("clock","Clock",Icons.Rounded.AccessTime,Color(0xFF9EAAEA)),
- AethraDesktopApp("contacts","Contacts",Icons.Rounded.Contacts,Color(0xFFFFA7B7)),
- AethraDesktopApp("reminders","Reminders",Icons.Rounded.Checklist,Color(0xFFFFC56E)),
- AethraDesktopApp("terminal","Terminal",Icons.Rounded.Code,Color(0xFF91D6B1)),
- AethraDesktopApp("store","App Store",Icons.Rounded.Store,Color(0xFF75A9FF)),
- AethraDesktopApp("android","Android Apps",Icons.Rounded.PhoneAndroid,Color(0xFF83D5A9))
+ MacOSDesktopApp("finder","Finder",Icons.Rounded.Folder,Color(0xFF68BDF4)),
+ MacOSDesktopApp("browser","Safari",Icons.Rounded.Language,Color(0xFF5DCBE8)),
+ MacOSDesktopApp("notes","Notes",Icons.Rounded.Notes,Color(0xFFFFD66B)),
+ MacOSDesktopApp("calendar","Calendar",Icons.Rounded.CalendarMonth,Color(0xFFFF777C)),
+ MacOSDesktopApp("photos","Photos",Icons.Rounded.PhotoLibrary,Color(0xFFCB8CF4)),
+ MacOSDesktopApp("settings","System Settings",Icons.Rounded.Settings,Color(0xFFAAB8C8)),
+ MacOSDesktopApp("mail","Mail",Icons.Rounded.Mail,Color(0xFF75BCEB)),
+ MacOSDesktopApp("maps","Maps",Icons.Rounded.Map,Color(0xFF73C99C)),
+ MacOSDesktopApp("clock","Clock",Icons.Rounded.AccessTime,Color(0xFF9EAAEA)),
+ MacOSDesktopApp("contacts","Contacts",Icons.Rounded.Contacts,Color(0xFFFFA7B7)),
+ MacOSDesktopApp("reminders","Reminders",Icons.Rounded.Checklist,Color(0xFFFFC56E)),
+ MacOSDesktopApp("terminal","Terminal",Icons.Rounded.Code,Color(0xFF91D6B1)),
+ MacOSDesktopApp("store","App Store",Icons.Rounded.Store,Color(0xFF75A9FF)),
+ MacOSDesktopApp("android","Android Apps",Icons.Rounded.PhoneAndroid,Color(0xFF83D5A9))
 )
 
 @Composable
-fun AethraFullDesktop() {
+fun MacOSDesktopSimulation27() {
  val context= LocalContext.current
  val wide= LocalConfiguration.current.screenWidthDp >= 700
- val prefs= remember(context) { context.getSharedPreferences("aethra_full_desktop",Context.MODE_PRIVATE) }
+ val prefs= remember(context) { context.getSharedPreferences("macos27_desktop",Context.MODE_PRIVATE) }
  var phase by rememberSaveable { mutableStateOf(DesktopPhase.BOOT.name) }
  var bootProgress by remember { mutableFloatStateOf(0f) }
  var clock by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -113,7 +113,7 @@ fun AethraFullDesktop() {
  var search by remember { mutableStateOf("") }
  var workspace by rememberSaveable { mutableIntStateOf(1) }
  var windows by remember { mutableStateOf(listOf<DesktopWindow>()) }
- var notes by remember { mutableStateOf(prefs.getString("notes","Welcome to AETHRA.\n\nA new desktop, a new beginning.") ?: "") }
+ var notes by remember { mutableStateOf(prefs.getString("notes","Welcome to macOS 27.\n\nA new desktop, a new beginning.") ?: "") }
  var noteInput by remember { mutableStateOf("") }
  var reminderInput by remember { mutableStateOf("") }
  var reminders by remember { mutableStateOf(listOf<String>()) }
@@ -180,14 +180,14 @@ fun AethraFullDesktop() {
   val maxW=maxWidth
   val maxH=maxHeight
   when(phase) {
-   DesktopPhase.BOOT.name -> AethraBoot(bootProgress)
-   DesktopPhase.LOCK.name -> AethraLockScreen(clock,battery,{ phase=DesktopPhase.DESKTOP.name },{
+   DesktopPhase.BOOT.name -> MacOSBoot(bootProgress)
+   DesktopPhase.LOCK.name -> MacOSLockScreen(clock,battery,{ phase=DesktopPhase.DESKTOP.name },{
     runCatching { context.startActivity(Intent(Settings.ACTION_HOME_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
    })
    else -> {
-    AethraWallpaper(Modifier.fillMaxSize())
+    MacOSWallpaper(Modifier.fillMaxSize())
     Column(Modifier.fillMaxSize()) {
-     AethraMenuBar(clock,battery,
+     MacOSMenuBar(clock,battery,
       { launchpad=true },
       { spotlight=true },
       { controlCenter=true },
@@ -206,11 +206,11 @@ fun AethraFullDesktop() {
       // Desktop items are deliberately quiet: windows are the primary interaction surface.
       Column(Modifier.align(Alignment.TopStart).padding(start=if(wide)28.dp else 16.dp,top=20.dp),verticalArrangement=Arrangement.spacedBy(15.dp)) {
        DesktopShortcut("Macintosh HD",Icons.Rounded.Computer,Color(0xFFB8D5EB)){openApp("finder")}
-       DesktopShortcut("AETHRA",Icons.Rounded.Folder,Color(0xFF79BCEB)){openApp("finder")}
+       DesktopShortcut("macOS 27",Icons.Rounded.Folder,Color(0xFF79BCEB)){openApp("finder")}
       }
       windows.filter { !it.minimized && it.workspace==workspace }.forEach { win ->
        key(win.id) {
-        AethraWindow(
+        MacOSWindow(
          win=win,front=frontWindow==win.id,screenW=maxW,screenH=maxH,wide=wide,
          onFocus={windows=windows.filterNot{it.id==win.id}+win;frontWindow=win.id},
          onMove={dx,dy->windows=windows.map{if(it.id==win.id)it.copy(x=(it.x+dx).coerceIn(0f,(maxW.value-260f).coerceAtLeast(0f)),y=(it.y+dy).coerceIn(0f,(maxH.value-170f).coerceAtLeast(0f)))else it}},
@@ -239,7 +239,7 @@ fun AethraFullDesktop() {
       }
       if(windows.none { !it.minimized && it.workspace==workspace }) {
        Column(Modifier.align(Alignment.Center),horizontalAlignment=Alignment.CenterHorizontally) {
-        Text("Welcome to AETHRA",color=AWhite,fontSize=if(wide)34.sp else 27.sp,fontWeight=FontWeight.Light)
+        Text("Welcome to macOS 27",color=AWhite,fontSize=if(wide)34.sp else 27.sp,fontWeight=FontWeight.Light)
         Text("Your desktop. Your space.",color=ASecondary,fontSize=13.sp)
         Spacer(Modifier.height(13.dp))
         Text("Double tap an app in the Dock or open Launchpad.",color=ASecondary.copy(alpha=.8f),fontSize=10.sp)
@@ -248,25 +248,25 @@ fun AethraFullDesktop() {
       Text("Desktop  $workspace / 4",color=AWhite.copy(alpha=.75f),fontSize=9.sp,
        modifier=Modifier.align(Alignment.BottomEnd).padding(15.dp))
      }
-     AethraDock(
+     MacOSDock(
       open={openApp(it)},
       launchpad={launchpad=true},
       minimized=windows.filter{it.minimized && it.workspace==workspace}.map{it.id},
       restore={id->windows=windows.map{if(it.id==id)it.copy(minimized=false)else it};frontWindow=id}
      )
     }
-    if(launchpad) AethraLaunchpad(search,{search=it},desktopApps,installed,::openApp,::launchDeviceApp){launchpad=false;search=""}
-    if(spotlight) AethraSpotlight(search,{search=it},desktopApps,installed,::openApp,::launchDeviceApp){spotlight=false;search=""}
-    if(controlCenter) AethraControlCenter(wifiPreview,{wifiPreview=it},bluetoothPreview,{bluetoothPreview=it},focusPreview,{focusPreview=it},brightness,{brightness=it},{controlCenter=false})
-    if(notificationCenter) AethraNotifications(clock){notificationCenter=false}
-    if(missionControl) AethraMissionControl(windows.filter{!it.minimized},workspace,{workspace=it},::openApp){missionControl=false}
+    if(launchpad) MacOSLaunchpad(search,{search=it},desktopApps,installed,::openApp,::launchDeviceApp){launchpad=false;search=""}
+    if(spotlight) MacOSSpotlight(search,{search=it},desktopApps,installed,::openApp,::launchDeviceApp){spotlight=false;search=""}
+    if(controlCenter) MacOSControlCenter(wifiPreview,{wifiPreview=it},bluetoothPreview,{bluetoothPreview=it},focusPreview,{focusPreview=it},brightness,{brightness=it},{controlCenter=false})
+    if(notificationCenter) MacOSNotifications(clock){notificationCenter=false}
+    if(missionControl) MacOSMissionControl(windows.filter{!it.minimized},workspace,{workspace=it},::openApp){missionControl=false}
    }
   }
  }
 }
 
 @Composable
-private fun AethraBoot(progress:Float) {
+private fun MacOSBoot(progress:Float) {
  val p by animateFloatAsState(progress, tween(250),label="boot")
  Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF071322),Color(0xFF101E31),Color(0xFF070B13)))),contentAlignment=Alignment.Center) {
   Column(horizontalAlignment=Alignment.CenterHorizontally) {
@@ -274,7 +274,7 @@ private fun AethraBoot(progress:Float) {
     Text("A",color=Color.White,fontSize=48.sp,fontWeight=FontWeight.Light)
    }
    Spacer(Modifier.height(19.dp))
-   Text("AETHRA",color=AWhite,fontSize=23.sp,fontWeight=FontWeight.Light,letterSpacing=6.sp)
+   Text("macOS 27",color=AWhite,fontSize=23.sp,fontWeight=FontWeight.Light,letterSpacing=6.sp)
    Spacer(Modifier.height(38.dp))
    Box(Modifier.width(150.dp).height(3.dp).clip(CircleShape).background(Color.White.copy(alpha=.15f))) {
     Box(Modifier.fillMaxHeight().fillMaxWidth(p).background(AWhite.copy(alpha=.9f)))
@@ -286,12 +286,12 @@ private fun AethraBoot(progress:Float) {
 }
 
 @Composable
-private fun AethraLockScreen(clock:Long,battery:Int,onUnlock:()->Unit,onSetHome:()->Unit) {
+private fun MacOSLockScreen(clock:Long,battery:Int,onUnlock:()->Unit,onSetHome:()->Unit) {
  val locale=androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
  val date=remember(clock,locale){SimpleDateFormat("EEEE, d MMMM",locale).format(Date(clock))}
  val time=remember(clock){SimpleDateFormat("h:mm",locale).format(Date(clock))}
  Box(Modifier.fillMaxSize()) {
-  AethraWallpaper(Modifier.fillMaxSize())
+  MacOSWallpaper(Modifier.fillMaxSize())
   Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x44030A18),Color(0x22030A18),Color(0x99030A18)))))
   Column(Modifier.align(Alignment.Center),horizontalAlignment=Alignment.CenterHorizontally) {
    Text(time,color=Color.White,fontSize=if(LocalConfiguration.current.screenWidthDp>=700)94.sp else 76.sp,fontWeight=FontWeight.ExtraLight,letterSpacing=(-4).sp)
@@ -301,7 +301,7 @@ private fun AethraLockScreen(clock:Long,battery:Int,onUnlock:()->Unit,onSetHome:
     Icon(Icons.Rounded.Lock,null,tint=Color.White,modifier=Modifier.size(23.dp))
    }
    Spacer(Modifier.height(18.dp))
-   Text("AETHRA",color=Color.White,fontSize=12.sp,letterSpacing=3.sp)
+   Text("macOS 27",color=Color.White,fontSize=12.sp,letterSpacing=3.sp)
    Text("Tap to enter your desktop",color=Color.White.copy(alpha=.76f),fontSize=11.sp)
    Spacer(Modifier.height(16.dp))
    Box(Modifier.clip(CircleShape).background(Color.White.copy(alpha=.18f)).border(1.dp,Color.White.copy(alpha=.35f),CircleShape)
@@ -309,7 +309,7 @@ private fun AethraLockScreen(clock:Long,battery:Int,onUnlock:()->Unit,onSetHome:
     Text("Unlock",color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Medium)
    }
    Spacer(Modifier.height(13.dp))
-   Text("Set AETHRA as your default Home app",color=Color.White.copy(alpha=.82f),fontSize=10.sp,
+   Text("Set macOS 27 as your default Home app",color=Color.White.copy(alpha=.82f),fontSize=10.sp,
     modifier=Modifier.clickable(onClick=onSetHome))
   }
   Row(Modifier.align(Alignment.BottomCenter).padding(26.dp),verticalAlignment=Alignment.CenterVertically) {
@@ -320,7 +320,7 @@ private fun AethraLockScreen(clock:Long,battery:Int,onUnlock:()->Unit,onSetHome:
 }
 
 @Composable
-private fun AethraWallpaper(modifier:Modifier=Modifier) {
+private fun MacOSWallpaper(modifier:Modifier=Modifier) {
  Canvas(modifier) {
   val w=size.width;val h=size.height
   drawRect(Brush.verticalGradient(listOf(Color(0xFF102A48),Color(0xFF416F91),Color(0xFFE1A27D),Color(0xFF182B43))))
@@ -341,12 +341,12 @@ private fun AethraWallpaper(modifier:Modifier=Modifier) {
 }
 
 @Composable
-private fun AethraMenuBar(clock:Long,battery:Int,onLaunch:()->Unit,onSearch:()->Unit,onControl:()->Unit,onNotifications:()->Unit,onMission:()->Unit,onHomeSettings:()->Unit) {
+private fun MacOSMenuBar(clock:Long,battery:Int,onLaunch:()->Unit,onSearch:()->Unit,onControl:()->Unit,onNotifications:()->Unit,onMission:()->Unit,onHomeSettings:()->Unit) {
  val locale=androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
  val time=remember(clock,locale){SimpleDateFormat("EEE d MMM  h:mm",locale).format(Date(clock))}
  Row(Modifier.fillMaxWidth().height(34.dp).background(Color(0xB817263A)).padding(horizontal=13.dp),verticalAlignment=Alignment.CenterVertically) {
   Text("A",color=AWhite,fontSize=16.sp,fontWeight=FontWeight.Bold,modifier=Modifier.clickable(onClick=onLaunch))
-  Text("  AETHRA",color=AWhite,fontSize=11.sp,fontWeight=FontWeight.SemiBold,modifier=Modifier.clickable(onClick=onHomeSettings))
+  Text("  macOS 27",color=AWhite,fontSize=11.sp,fontWeight=FontWeight.SemiBold,modifier=Modifier.clickable(onClick=onHomeSettings))
   Spacer(Modifier.width(18.dp))
   Text("File",color=AWhite.copy(alpha=.86f),fontSize=10.sp,modifier=Modifier.clickable(onClick=onLaunch))
   Text("  Edit",color=AWhite.copy(alpha=.86f),fontSize=10.sp)
@@ -376,7 +376,7 @@ private fun DesktopShortcut(title:String,icon:androidx.compose.ui.graphics.vecto
 }
 
 @Composable
-private fun AethraDock(open:(String)->Unit,launchpad:()->Unit,minimized:List<String>,restore:(String)->Unit) {
+private fun MacOSDock(open:(String)->Unit,launchpad:()->Unit,minimized:List<String>,restore:(String)->Unit) {
  Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp),horizontalArrangement=Arrangement.Center,verticalAlignment=Alignment.CenterVertically) {
   Row(Modifier.clip(RoundedCornerShape(22.dp)).background(Color(0xD91B2A3D)).border(1.dp,AStroke,RoundedCornerShape(22.dp)).padding(horizontal=7.dp,vertical=7.dp),
    horizontalArrangement=Arrangement.spacedBy(5.dp),verticalAlignment=Alignment.CenterVertically) {
@@ -407,7 +407,7 @@ private fun DockIcon(label:String,icon:androidx.compose.ui.graphics.vector.Image
 
 
 @Composable
-private fun AethraWindow(win:DesktopWindow,front:Boolean,screenW:androidx.compose.ui.unit.Dp,screenH:androidx.compose.ui.unit.Dp,wide:Boolean,
+private fun MacOSWindow(win:DesktopWindow,front:Boolean,screenW:androidx.compose.ui.unit.Dp,screenH:androidx.compose.ui.unit.Dp,wide:Boolean,
  onFocus:()->Unit,onMove:(Float,Float)->Unit,onMinimize:()->Unit,onMaximize:()->Unit,onClose:()->Unit,content:@Composable ColumnScope.()->Unit) {
  val width=if(win.maximized)screenW else if(wide)minOf(760.dp,screenW-70.dp) else screenW-20.dp
  val height=if(win.maximized)screenH else if(wide)minOf(520.dp,screenH-95.dp) else screenH-90.dp
@@ -435,7 +435,7 @@ private fun AethraWindow(win:DesktopWindow,front:Boolean,screenW:androidx.compos
 }
 
 @Composable
-private fun AethraLaunchpad(query:String,onQuery:(String)->Unit,apps:List<AethraDesktopApp>,installed:List<DeviceApp>,open:(String)->Unit,launch:(DeviceApp)->Unit,onClose:()->Unit) {
+private fun MacOSLaunchpad(query:String,onQuery:(String)->Unit,apps:List<MacOSDesktopApp>,installed:List<DeviceApp>,open:(String)->Unit,launch:(DeviceApp)->Unit,onClose:()->Unit) {
  Box(Modifier.fillMaxSize().background(Color(0xCC071321)).clickable(onClick=onClose).padding(15.dp),contentAlignment=Alignment.Center) {
   Column(Modifier.fillMaxWidth().fillMaxHeight(.92f).widthIn(max=760.dp).clip(RoundedCornerShape(24.dp)).background(Color(0xE51B2A3D)).border(1.dp,AStroke,RoundedCornerShape(24.dp)).clickable(enabled=false){ }.padding(20.dp)) {
    Row(verticalAlignment=Alignment.CenterVertically) {
@@ -461,7 +461,7 @@ private fun AethraLaunchpad(query:String,onQuery:(String)->Unit,apps:List<Aethra
 }
 
 @Composable
-private fun AethraSpotlight(query:String,onQuery:(String)->Unit,apps:List<AethraDesktopApp>,installed:List<DeviceApp>,open:(String)->Unit,launch:(DeviceApp)->Unit,onClose:()->Unit) {
+private fun MacOSSpotlight(query:String,onQuery:(String)->Unit,apps:List<MacOSDesktopApp>,installed:List<DeviceApp>,open:(String)->Unit,launch:(DeviceApp)->Unit,onClose:()->Unit) {
  Box(Modifier.fillMaxSize().background(Color(0x99030A13)).clickable(onClick=onClose).padding(top=45.dp).padding(horizontal=14.dp),contentAlignment=Alignment.TopCenter) {
   Column(Modifier.fillMaxWidth().widthIn(max=570.dp).clip(RoundedCornerShape(17.dp)).background(Color(0xF0253549)).border(1.dp,AStroke,RoundedCornerShape(17.dp)).clickable(enabled=false){}.padding(15.dp)) {
    Row(verticalAlignment=Alignment.CenterVertically) {
@@ -503,7 +503,7 @@ private fun AppGridItem(title:String,icon:androidx.compose.ui.graphics.vector.Im
 }
 
 @Composable
-private fun AethraControlCenter(wifi:Boolean,onWifi:(Boolean)->Unit,bluetooth:Boolean,onBluetooth:(Boolean)->Unit,focus:Boolean,onFocus:(Boolean)->Unit,brightness:Float,onBrightness:(Float)->Unit,onClose:()->Unit) {
+private fun MacOSControlCenter(wifi:Boolean,onWifi:(Boolean)->Unit,bluetooth:Boolean,onBluetooth:(Boolean)->Unit,focus:Boolean,onFocus:(Boolean)->Unit,brightness:Float,onBrightness:(Float)->Unit,onClose:()->Unit) {
  Box(Modifier.fillMaxSize().background(Color(0x66030A14)).clickable(onClick=onClose).padding(10.dp),contentAlignment=Alignment.TopEnd) {
   Column(Modifier.widthIn(max=370.dp).fillMaxWidth(.96f).clip(RoundedCornerShape(22.dp)).background(Color(0xF0253549)).border(1.dp,AStroke,RoundedCornerShape(22.dp)).clickable(enabled=false){}.padding(17.dp)) {
    Row(verticalAlignment=Alignment.CenterVertically) {Text("Control Center",color=AWhite,fontSize=22.sp,modifier=Modifier.weight(1f));Icon(Icons.Rounded.Close,null,tint=AWhite,modifier=Modifier.clickable(onClick=onClose))}
@@ -529,7 +529,7 @@ private fun ControlTile(title:String,active:Boolean,icon:androidx.compose.ui.gra
 }
 
 @Composable
-private fun AethraNotifications(clock:Long,onClose:()->Unit) {
+private fun MacOSNotifications(clock:Long,onClose:()->Unit) {
  val locale=androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
  Box(Modifier.fillMaxSize().background(Color(0x77030A14)).clickable(onClick=onClose).padding(10.dp),contentAlignment=Alignment.TopEnd) {
   Column(Modifier.widthIn(max=350.dp).fillMaxWidth(.95f).clip(RoundedCornerShape(22.dp)).background(Color(0xF0253549)).padding(17.dp)) {
@@ -544,7 +544,7 @@ private fun AethraNotifications(clock:Long,onClose:()->Unit) {
 }
 
 @Composable
-private fun AethraMissionControl(windows:List<DesktopWindow>,workspace:Int,onWorkspace:(Int)->Unit,open:(String)->Unit,onClose:()->Unit) {
+private fun MacOSMissionControl(windows:List<DesktopWindow>,workspace:Int,onWorkspace:(Int)->Unit,open:(String)->Unit,onClose:()->Unit) {
  Box(Modifier.fillMaxSize().background(Color(0xD9081422)).clickable(onClick=onClose).padding(15.dp),contentAlignment=Alignment.Center) {
   Column(Modifier.fillMaxWidth().fillMaxHeight(.88f).clip(RoundedCornerShape(22.dp)).background(Color(0xE51C2B3E)).clickable(enabled=false){}.padding(18.dp)) {
    Row(verticalAlignment=Alignment.CenterVertically) {Text("Mission Control",color=AWhite,fontSize=25.sp,modifier=Modifier.weight(1f));Icon(Icons.Rounded.Close,null,tint=AWhite,modifier=Modifier.clickable(onClick=onClose))}
@@ -597,7 +597,7 @@ private fun BrowserContent(context:Context) {
     runCatching { context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(target)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
    }.padding(11.dp)){Icon(Icons.Rounded.ArrowForward,null,tint=Color(0xFF10253A),modifier=Modifier.size(16.dp))}
   }
-  Text("AETHRA Browser hands web pages to your installed Android browser. A built-in browser engine is not bundled yet.",color=ASecondary,fontSize=10.sp)
+  Text("macOS 27 Browser hands web pages to your installed Android browser. A built-in browser engine is not bundled yet.",color=ASecondary,fontSize=10.sp)
   Row(horizontalArrangement=Arrangement.spacedBy(7.dp)) {
    listOf("Apple","Wikipedia","OpenAI").forEach { label ->
     Box(Modifier.clip(CircleShape).background(Color.White.copy(alpha=.1f)).clickable { url=when(label){"Apple"->"https://www.apple.com";"Wikipedia"->"https://www.wikipedia.org";else->"https://www.openai.com"} }.padding(horizontal=12.dp,vertical=8.dp)) {Text(label,color=AWhite,fontSize=9.sp)}
@@ -639,7 +639,7 @@ private fun PhotosContent(context:Context) {
 private fun SettingsContent(context:Context,wifi:Boolean,onWifi:(Boolean)->Unit,bluetooth:Boolean,onBluetooth:(Boolean)->Unit,focus:Boolean,onFocus:(Boolean)->Unit,brightness:Float,onBrightness:(Float)->Unit) {
  Column(Modifier.fillMaxSize().verticalScroll(androidx.compose.foundation.rememberScrollState()),verticalArrangement=Arrangement.spacedBy(10.dp)) {
   Text("System Settings",color=AWhite,fontSize=24.sp,fontWeight=FontWeight.Light)
-  Text("AETHRA desktop preferences and Android system links.",color=ASecondary,fontSize=10.sp)
+  Text("macOS 27 desktop preferences and Android system links.",color=ASecondary,fontSize=10.sp)
   ControlTile("Wi-Fi preview",wifi,Icons.Rounded.Wifi,{onWifi(!wifi)},Modifier.fillMaxWidth())
   ControlTile("Bluetooth preview",bluetooth,Icons.Rounded.Bluetooth,{onBluetooth(!bluetooth)},Modifier.fillMaxWidth())
   ControlTile("Focus mode preview",focus,Icons.Rounded.DoNotDisturbOn,{onFocus(!focus)},Modifier.fillMaxWidth())
@@ -687,9 +687,9 @@ private fun RemindersContent(input:String,onInput:(String)->Unit,items:List<Stri
 @Composable
 private fun TerminalContent() {
  Column(Modifier.fillMaxSize().background(Color(0xFF08120F)).padding(10.dp)) {
-  Text("AETHRA Terminal · safe demo",color=Color(0xFF9AE6B4),fontSize=11.sp)
+  Text("macOS 27 Terminal · safe demo",color=Color(0xFF9AE6B4),fontSize=11.sp)
   Text("This is a visual terminal mock-up. It does not execute shell commands.",color=Color(0xFF9AE6B4),fontSize=9.sp)
-  Text("aethra@desktop:~$ help\nAvailable demo commands: help, date, version, clear",color=Color(0xFFBCE8CA),fontSize=10.sp,lineHeight=17.sp)
+  Text("user@macos27:~$ help\nAvailable demo commands: help, date, version, clear",color=Color(0xFFBCE8CA),fontSize=10.sp,lineHeight=17.sp)
  }
 }
 
