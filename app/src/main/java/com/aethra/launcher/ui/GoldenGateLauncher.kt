@@ -102,6 +102,7 @@ fun GoldenGateLauncher() {
             context.packageManager.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0)
                 .mapNotNull { info ->
                     val a = info.activityInfo ?: return@mapNotNull null
+                    if (a.packageName == context.packageName) return@mapNotNull null
                     DesktopApp(info.loadLabel(context.packageManager)?.toString()?.trim()?.ifEmpty { a.packageName } ?: a.packageName,
                         a.packageName, a.name, info.loadIcon(context.packageManager))
                 }.distinctBy { it.packageName }.sortedBy { it.title.lowercase(Locale.getDefault()) }
@@ -119,7 +120,7 @@ fun GoldenGateLauncher() {
         listOf("chrome", "camera", "settings", "messages", "phone", "photos", "gallery", "youtube", "play")
             .any { app.packageName.contains(it, true) }
     }.take(8)
-    val desktopApps = (favourites + suggested + apps).distinctBy { it.packageName }.take(12)
+    val desktopApps = (favourites + if (suggested.isNotEmpty()) suggested else apps.take(12)).distinctBy { it.packageName }.take(12)
     val filteredApps = if (query.isBlank()) apps else apps.filter {
         it.title.contains(query.trim(), true) || it.packageName.contains(query.trim(), true)
     }
@@ -315,7 +316,7 @@ private fun SearchBar(query: String, onChange: (String) -> Unit, onOpen: () -> U
                 if (query.isEmpty()) Text("Search apps and open anything", color = FG.copy(alpha = .67f), fontSize = 13.sp)
                 inner()
             })
-        Text("Ctrl  Space", color = FG.copy(alpha = .55f), fontSize = 9.sp,
+        Text("OPEN", color = FG.copy(alpha = .68f), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp,
             modifier = Modifier.combinedClickable(onClick = onOpen, onLongClick = onOpen))
     }
 }
