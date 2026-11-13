@@ -1,43 +1,41 @@
-# AETHRA Music
+# macOS Desktop Simulation 27
 
-**AETHRA — Music Without Limits.**  
-Current app version: **1.6.3**.
+**A macOS-inspired desktop environment for Android phones and tablets.**
 
-AETHRA is an Android music player with on-device audio playback and YouTube music-video discovery.
+macOS Desktop Simulation 27 recreates the feel and workflow of a desktop operating system on Android. It is an Android application and launcher, not Apple's macOS operating system or a virtual machine.
 
-## Product principles
+## Experience
 
-- No AETHRA account or sign-in.
-- Local music playback using Android MediaStore and Media3.
-- YouTube music-video discovery through the supported YouTube Data API v3.
-- YouTube search results open on YouTube; they are discovery links, not in-app audio streams.
-- No AETHRA-inserted advertisements.
+- Desktop workspace with a custom landscape wallpaper
+- macOS-inspired menu bar, Dock, Launchpad and Spotlight-style search
+- Mission Control-style overview and four swipe-switchable workspaces
+- Resizable-feeling desktop window controls: focus, drag, minimize, maximize and close
+- Finder-style access through Android's system document picker
+- Notes with local persistence
+- Calendar, Photos, Mail, Maps, Clock, Contacts and Reminders surfaces
+- Android app launcher that discovers and launches installed apps
+- Control Center-style quick panel and notification overview
+- Tablet-first responsive layout with a compact phone layout
+- Immersive full-screen presentation with Android system bars available by swipe
 
-## Online discovery and playback
+## Platform boundaries
 
-AETHRA plays local audio inside the app using Media3. The MediaSession service supports background playback and system media controls. Audio focus is requested for playback and playback pauses appropriately when audio becomes noisy (for example, headphones are unplugged).
+This project simulates the desktop experience. Android remains the underlying operating system.
 
-## Online discovery
-
-AETHRA uses the official YouTube Data API v3 search endpoint for video metadata, titles, channel names, and thumbnails. It does not use the zerodytrash internal-client discovery script as an API: that repository is a research tool for undocumented client identifiers, not a supported API or Android SDK.
-
-The YouTube Data API does not return direct audio-stream URLs and does not grant rights to redistribute or stream commercial recordings inside AETHRA. Search results therefore open through YouTube rather than being falsely presented as direct in-app audio streams.
-
-The API key is injected at build time from the `YOUTUBE_API_KEY` Gradle property or environment variable. For GitHub Actions builds, configure a repository Actions secret named `YOUTUBE_API_KEY`. Restrict the Google key to the YouTube Data API and appropriate application/API usage. A key embedded in an APK is extractable; build-time injection is not a substitute for a backend proxy or proper key restrictions.
-
-## Interface and experience
-
-AETHRA includes three visual styles with light and dark palettes. Liquid Glass uses translucent layered surfaces, luminous edges, slow ambient light fields, animated optical accents, and responsive player artwork. Navigation uses a compact animated dock; the mini-player shows live progress and quick transport controls; the full-screen player adapts its artwork and controls to available screen space. Motion is concentrated on active elements and key transitions to keep long music lists responsive.
-
-Discovery includes quick genre shortcuts and keyboard search. Library rows identify the active track, show artwork and duration, and provide direct liked-music controls.
+- It does not run Apple's macOS kernel, frameworks or desktop binaries.
+- It does not replace Android's secure lock screen or system permissions.
+- Finder-style file access uses Android's document picker.
+- Web pages are handed to the installed Android browser.
+- Apple-only services such as iCloud, AirDrop, FaceTime, Apple ID and the Mac App Store are not implemented.
+- The demo Terminal is non-executing and cannot run shell commands.
+- Control Center preview switches do not silently change protected Android system settings; real settings open Android's own settings screens.
 
 ## Android implementation
 
 - Kotlin
 - Jetpack Compose
-- AndroidX Media3 ExoPlayer and MediaSession
-- YouTube Data API v3 for discovery
-- Android MediaStore for local audio discovery
+- AndroidX
+- Android intents and system document/photo pickers
 
 ## Build
 
@@ -45,11 +43,11 @@ GitHub Actions runs Android lint/resource verification and assembles a debug APK
 
 The debug APK is for testing and is not a Play Store production-signed release.
 
-## Package
+## Application identity
 
-`com.aethra.launcher`
+The visible app name is **macOS Desktop Simulation 27**.
 
-The application ID is retained to preserve update compatibility with existing installations.
+The existing Android application ID `com.aethra.launcher` is intentionally retained so an installed copy can be updated without changing its package identity. This technical identifier does not appear as the product name in the interface.
 
 ## Licensing
 
