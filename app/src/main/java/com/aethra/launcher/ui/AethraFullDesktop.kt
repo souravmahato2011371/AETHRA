@@ -392,7 +392,7 @@ private fun DockIcon(label:String,icon:androidx.compose.ui.graphics.vector.Image
  var pressed by remember{mutableStateOf(false)}
  val scale by animateFloatAsState(if(pressed)1.17f else 1f,label="dock-scale")
  Column(Modifier.width(43.dp).clickable { pressed=true;onClick() },horizontalAlignment=Alignment.CenterHorizontally) {
-  Box(Modifier.size(39.dp).shadow(5.dp,RoundedCornerShape(11.dp)).scaleCompat(scale).clip(RoundedCornerShape(11.dp)).background(Brush.linearGradient(listOf(tint.copy(alpha=.95f),tint.copy(alpha=.45f)))),contentAlignment=Alignment.Center) {
+  Box(Modifier.size(39.dp).shadow(5.dp,RoundedCornerShape(11.dp)).scale(scale).clip(RoundedCornerShape(11.dp)).background(Brush.linearGradient(listOf(tint.copy(alpha=.95f),tint.copy(alpha=.45f)))),contentAlignment=Alignment.Center) {
    Icon(icon,null,tint=Color.White,modifier=Modifier.size(24.dp))
   }
   Spacer(Modifier.height(4.dp))
@@ -400,7 +400,6 @@ private fun DockIcon(label:String,icon:androidx.compose.ui.graphics.vector.Image
  }
 }
 
-private fun Modifier.scaleCompat(scale:Float):Modifier=androidx.compose.ui.draw.scale(scale)
 
 @Composable
 private fun AethraWindow(win:DesktopWindow,front:Boolean,screenW:androidx.compose.ui.unit.Dp,screenH:androidx.compose.ui.unit.Dp,wide:Boolean,
