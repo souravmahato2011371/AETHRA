@@ -9,6 +9,5 @@
         <item name="android:windowActionModeOverlay">true</item>
         <item name="android:windowBackground">@color/launcher_background</item>
         <item name="android:colorAccent">#FF9A78</item>
-        <item name="android:forceDarkAllowed">false</item>
     </style>
 </resources>
