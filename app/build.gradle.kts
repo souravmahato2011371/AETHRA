@@ -11,8 +11,8 @@ android {
         applicationId = "com.aethra.launcher"
         minSdk = 26
         targetSdk = 36
-        versionCode = 14
-        versionName = "1.7.0"
+        versionCode = 15
+        versionName = "1.8.0"
     }
 
     buildFeatures {
@@ -39,17 +39,10 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.ui:ui-text-google-fonts")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.animation:animation")
     implementation("androidx.compose.material3:material3")
-    implementation("com.github.skydoves:cloudy:0.7.1")
     implementation("androidx.compose.material:material-icons-extended")
-
-    // Retained temporarily while legacy playback sources are removed in the cleanup pass.
-    implementation("androidx.media3:media3-exoplayer:1.9.0")
-    implementation("androidx.media3:media3-exoplayer-hls:1.9.0")
-    implementation("androidx.media3:media3-session:1.9.0")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
