@@ -108,7 +108,7 @@ fun GoldenGateLauncher() {
                 .mapNotNull { info ->
                     val a = info.activityInfo ?: return@mapNotNull null
                     if (a.packageName == context.packageName) return@mapNotNull null
-                    DesktopApp(info.loadLabel(context.packageManager)?.toString()?.trim()?.ifEmpty { a.packageName } ?: a.packageName,
+                    DesktopApp(info.loadLabel(context.packageManager).toString().trim().ifEmpty { a.packageName },
                         a.packageName, a.name, info.loadIcon(context.packageManager))
                 }.distinctBy { it.packageName }.sortedBy { it.title.lowercase(Locale.getDefault()) }
         }
