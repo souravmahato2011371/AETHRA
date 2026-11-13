@@ -11,8 +11,8 @@ android {
         applicationId = "com.aethra.launcher"
         minSdk = 26
         targetSdk = 36
-        versionCode = 27
-        versionName = "27.0.0"
+        versionCode = 28
+        versionName = "27.1.0"
     }
 
     buildFeatures {
