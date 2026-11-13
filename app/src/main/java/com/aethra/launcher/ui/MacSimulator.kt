@@ -10,6 +10,7 @@ import android.os.BatteryManager
 import android.provider.Settings
 import android.provider.CalendarContract
 import android.provider.ContactsContract
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -114,7 +115,7 @@ fun MacSimulatorApp() {
  var wifi by rememberSaveable { mutableStateOf(true) }
  var dark by rememberSaveable { mutableStateOf(true) }
  val preferences = remember(context) { context.getSharedPreferences("aethra_preferences", Context.MODE_PRIVATE) }
- var savedNotes by remember { mutableStateOf(preferences.getString("notes", "Welcome to AETHRA Notes.\\n\\nA fresh space for your ideas.") ?: "") }
+ var savedNotes by remember { mutableStateOf(preferences.getString("notes", "Welcome to AETHRA Notes.\n\nA fresh space for your ideas.") ?: "") }
  val openApp: (String) -> Unit = { id ->
   if(id=="android") androidPanel=true else {
    active=id
@@ -134,6 +135,17 @@ fun MacSimulatorApp() {
     .setClassName(app.packageName,app.activity).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
   }
   androidPanel=false
+ }
+ BackHandler(enabled=active!=null || launchpad || androidPanel || controlCenter || notificationCenter || spotlight || missionControl) {
+  when {
+   spotlight -> { spotlight=false;query="" }
+   controlCenter -> controlCenter=false
+   notificationCenter -> notificationCenter=false
+   missionControl -> missionControl=false
+   launchpad -> { launchpad=false;query="" }
+   androidPanel -> androidPanel=false
+   active!=null -> active=null
+  }
  }
  LaunchedEffect(Unit) {
   val labels=listOf("Starting AETHRA system","Loading Golden Gate desktop","Preparing applications","Almost there")
@@ -168,7 +180,7 @@ fun MacSimulatorApp() {
   AnimatedVisibility(boot,Modifier.fillMaxSize()) { BootAnimation(progress,bootText) }
   AnimatedVisibility(!boot,Modifier.fillMaxSize()) {
    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal=if(wide)22.dp else 10.dp, vertical=8.dp)) {
-    SimMenu(now,battery,{launchpad=true},{openApp("settings")},{controlCenter=true},{notificationCenter=true},{spotlight=true})
+    SimMenu(now,battery,{launchpad=true},{openApp("settings")},{controlCenter=true},{notificationCenter=true},{spotlight=true},{missionControl=true})
     Spacer(Modifier.height(12.dp))
     Box(Modifier.weight(1f).fillMaxWidth()) {
      if(wide) {
@@ -203,7 +215,7 @@ fun MacSimulatorApp() {
        Spacer(Modifier.height(16.dp))
        LazyVerticalGrid(columns=GridCells.Adaptive(78.dp),modifier=Modifier.weight(1f),
         horizontalArrangement=Arrangement.spacedBy(4.dp),verticalArrangement=Arrangement.spacedBy(9.dp)) {
-        items(simApps,key={it.id}) { SimIcon(it){active=it.id} }
+        items(simApps,key={it.id}) { SimIcon(it){openApp(it.id)} }
         item { SimIcon(SimApp("android","Android Apps",Icons.Rounded.PhoneAndroid,Color(0xFF86D9B0))){androidPanel=true} }
        }
       }
@@ -215,7 +227,7 @@ fun MacSimulatorApp() {
       }
      }
      if(launchpad) {
-      SimLaunchpad(query,{query=it},{id->if(id=="android")androidPanel=true else active=id;launchpad=false;query=""},{launchpad=false})
+      SimLaunchpad(query,{query=it},{id->openApp(id);launchpad=false;query=""},{launchpad=false})
      }
      if(androidPanel) {
       AndroidAppsWindow(installed,{androidPanel=false}) { app -> launchAndroidApp(app) }
@@ -279,12 +291,12 @@ private fun SimWallpaper(modifier:Modifier=Modifier) {
 }
 
 @Composable
-private fun SimMenu(now:Long,battery:Int,onLaunch:()->Unit,onSettings:()->Unit,onControl:()->Unit,onNotifications:()->Unit,onSpotlight:()->Unit) {
+private fun SimMenu(now:Long,battery:Int,onLaunch:()->Unit,onSettings:()->Unit,onControl:()->Unit,onNotifications:()->Unit,onSpotlight:()->Unit,onMissionControl:()->Unit) {
  Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Brush.verticalGradient(listOf(Color.White.copy(alpha=.24f),Color.White.copy(alpha=.09f)))).border(1.dp,Color.White.copy(alpha=.24f),RoundedCornerShape(18.dp)).padding(horizontal=12.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically) {
   Text("A",color=SW,fontWeight=FontWeight.Black,fontSize=16.sp,modifier=Modifier.clip(CircleShape).background(Color.White.copy(alpha=.16f)).clickable(onClick=onLaunch).padding(horizontal=8.dp,vertical=3.dp))
   Spacer(Modifier.width(10.dp));Text("AETHRA",color=SW,fontSize=10.sp,fontWeight=FontWeight.Bold,letterSpacing=1.2.sp)
   Spacer(Modifier.width(12.dp));Text("Desktop",color=SW.copy(alpha=.8f),fontSize=10.sp,modifier=Modifier.clickable(onClick=onLaunch))
-  Text("Spaces",color=SW.copy(alpha=.8f),fontSize=10.sp,modifier=Modifier.padding(start=10.dp).clickable(onClick=onLaunch))
+  Text("Spaces",color=SW.copy(alpha=.8f),fontSize=10.sp,modifier=Modifier.padding(start=10.dp).clickable(onClick=onMissionControl))
   Spacer(Modifier.weight(1f));Icon(Icons.Rounded.Search,"Spotlight search",tint=SW,modifier=Modifier.size(17.dp).clickable(onClick=onSpotlight))
   Spacer(Modifier.width(10.dp));Icon(Icons.Rounded.Tune,"Control Center",tint=SW,modifier=Modifier.size(17.dp).clickable(onClick=onControl))
   Spacer(Modifier.width(10.dp));Icon(Icons.Rounded.Notifications,"Notification Center",tint=SW,modifier=Modifier.size(17.dp).clickable(onClick=onNotifications))
