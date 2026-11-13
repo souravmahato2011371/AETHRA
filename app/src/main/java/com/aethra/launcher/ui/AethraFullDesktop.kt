@@ -75,7 +75,7 @@ private val AStroke = Color(0x40FFFFFF)
 private enum class DesktopPhase { BOOT, LOCK, DESKTOP }
 private data class DesktopApp(val id:String,val title:String,val icon:androidx.compose.ui.graphics.vector.ImageVector,val tint:Color)
 private data class DeviceApp(val title:String,val packageName:String,val activity:String,val icon:Drawable)
-private data class DesktopWindow(val id:String,val title:String,val x:Float,val y:Float,val minimized:Boolean=false,val maximized:Boolean=false)
+private data class DesktopWindow(val id:String,val title:String,val x:Float,val y:Float,val workspace:Int,val minimized:Boolean=false,val maximized:Boolean=false)
 
 private val desktopApps = listOf(
  DesktopApp("finder","Finder",Icons.Rounded.Folder,Color(0xFF68BDF4)),
@@ -148,8 +148,8 @@ fun AethraFullDesktop() {
  }
  fun openApp(id:String) {
   val old=windows.firstOrNull { it.id==id }
-  val next=if(old==null) windows+DesktopWindow(id,desktopApps.firstOrNull{it.id==id}?.title ?: id.replaceFirstChar{it.uppercase()},if(wide)180f else 18f,if(wide)90f else 70f)
-   else windows.map { if(it.id==id) it.copy(minimized=false) else it }
+  val next=if(old==null) windows+DesktopWindow(id,desktopApps.firstOrNull{it.id==id}?.title ?: id.replaceFirstChar{it.uppercase()},if(wide)180f else 18f,if(wide)90f else 70f,workspace)
+   else { workspace=old.workspace; windows.map { if(it.id==id) it.copy(minimized=false) else it } }
   windows=next
   frontWindow=id
   launchpad=false;spotlight=false;missionControl=false;controlCenter=false;notificationCenter=false
@@ -162,7 +162,7 @@ fun AethraFullDesktop() {
   runCatching { context.startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setClassName(app.packageName,app.activity).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
   launchpad=false;spotlight=false;missionControl=false
  }
- BackHandler(phase!=DesktopPhase.BOOT.name || launchpad || spotlight || controlCenter || notificationCenter || missionControl || windows.isNotEmpty()) {
+ BackHandler(launchpad || spotlight || controlCenter || notificationCenter || missionControl || frontWindow!=null) {
   when {
    phase==DesktopPhase.LOCK.name -> phase=DesktopPhase.DESKTOP.name
    spotlight -> {spotlight=false;search=""}
@@ -204,7 +204,7 @@ fun AethraFullDesktop() {
        DesktopShortcut("Macintosh HD",Icons.Rounded.Computer,Color(0xFFB8D5EB)){openApp("finder")}
        DesktopShortcut("AETHRA",Icons.Rounded.Folder,Color(0xFF79BCEB)){openApp("finder")}
       }
-      windows.filter { !it.minimized }.forEach { win ->
+      windows.filter { !it.minimized && it.workspace==workspace }.forEach { win ->
        key(win.id) {
         AethraWindow(
          win=win,front=frontWindow==win.id,screenW=maxW,screenH=maxH,wide=wide,
@@ -233,7 +233,7 @@ fun AethraFullDesktop() {
         }
        }
       }
-      if(windows.none { !it.minimized }) {
+      if(windows.none { !it.minimized && it.workspace==workspace }) {
        Column(Modifier.align(Alignment.Center),horizontalAlignment=Alignment.CenterHorizontally) {
         Text("Welcome to AETHRA",color=AWhite,fontSize=if(wide)34.sp else 27.sp,fontWeight=FontWeight.Light)
         Text("Your desktop. Your space.",color=ASecondary,fontSize=13.sp)
@@ -247,7 +247,7 @@ fun AethraFullDesktop() {
      AethraDock(
       open={openApp(it)},
       launchpad={launchpad=true},
-      minimized=windows.filter{it.minimized}.map{it.id},
+      minimized=windows.filter{it.minimized && it.workspace==workspace}.map{it.id},
       restore={id->windows=windows.map{if(it.id==id)it.copy(minimized=false)else it};frontWindow=id}
      )
     }
@@ -283,7 +283,8 @@ private fun AethraBoot(progress:Float) {
 
 @Composable
 private fun AethraLockScreen(clock:Long,battery:Int,onUnlock:()->Unit) {
- val date=remember(clock){SimpleDateFormat("EEEE, d MMMM",Locale.getDefault()).format(Date(clock))}
+ val locale=androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
+ val date=remember(clock,locale){SimpleDateFormat("EEEE, d MMMM",locale).format(Date(clock))}
  val time=remember(clock){SimpleDateFormat("h:mm",Locale.getDefault()).format(Date(clock))}
  Box(Modifier.fillMaxSize()) {
   AethraWallpaper(Modifier.fillMaxSize())
@@ -334,7 +335,8 @@ private fun AethraWallpaper(modifier:Modifier=Modifier) {
 
 @Composable
 private fun AethraMenuBar(clock:Long,battery:Int,onLaunch:()->Unit,onSearch:()->Unit,onControl:()->Unit,onNotifications:()->Unit,onMission:()->Unit,onHomeSettings:()->Unit) {
- val time=remember(clock){SimpleDateFormat("EEE d MMM  h:mm",Locale.getDefault()).format(Date(clock))}
+ val locale=androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
+ val time=remember(clock,locale){SimpleDateFormat("EEE d MMM  h:mm",locale).format(Date(clock))}
  Row(Modifier.fillMaxWidth().height(34.dp).background(Color(0xB817263A)).padding(horizontal=13.dp),verticalAlignment=Alignment.CenterVertically) {
   Text("A",color=AWhite,fontSize=16.sp,fontWeight=FontWeight.Bold,modifier=Modifier.clickable(onClick=onLaunch))
   Text("  AETHRA",color=AWhite,fontSize=11.sp,fontWeight=FontWeight.SemiBold,modifier=Modifier.clickable(onClick=onHomeSettings))
@@ -522,11 +524,12 @@ private fun ControlTile(title:String,active:Boolean,icon:androidx.compose.ui.gra
 
 @Composable
 private fun AethraNotifications(clock:Long,onClose:()->Unit) {
+ val locale=androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
  Box(Modifier.fillMaxSize().background(Color(0x77030A14)).clickable(onClick=onClose).padding(10.dp),contentAlignment=Alignment.TopEnd) {
   Column(Modifier.widthIn(max=350.dp).fillMaxWidth(.95f).clip(RoundedCornerShape(22.dp)).background(Color(0xF0253549)).padding(17.dp)) {
    Row(verticalAlignment=Alignment.CenterVertically) {Text("Notification Center",color=AWhite,fontSize=21.sp,modifier=Modifier.weight(1f));Icon(Icons.Rounded.Close,null,tint=AWhite,modifier=Modifier.clickable(onClick=onClose))}
    Spacer(Modifier.height(12.dp))
-   Text(SimpleDateFormat("EEEE, d MMMM",Locale.getDefault()).format(Date(clock)),color=ASecondary,fontSize=11.sp)
+   Text(SimpleDateFormat("EEEE, d MMMM",locale).format(Date(clock)),color=ASecondary,fontSize=11.sp)
    Text(SimpleDateFormat("h:mm",Locale.getDefault()).format(Date(clock)),color=AWhite,fontSize=49.sp,fontWeight=FontWeight.ExtraLight)
    Spacer(Modifier.height(12.dp));Text("You’re all caught up.",color=AWhite,fontSize=14.sp)
    Text("Android notifications remain protected by the operating system.",color=ASecondary,fontSize=10.sp)
@@ -605,8 +608,9 @@ private fun NotesContent(notes:String,onNotes:(String)->Unit) {
 
 @Composable
 private fun CalendarContent(context:Context) {
+ val locale=androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
  Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
-  Text(SimpleDateFormat("MMMM yyyy",Locale.getDefault()).format(Date()),color=AWhite,fontSize=22.sp,fontWeight=FontWeight.Light)
+  Text(SimpleDateFormat("MMMM yyyy",locale).format(Date()),color=AWhite,fontSize=22.sp,fontWeight=FontWeight.Light)
   Text("Your calendar stays on your device.",color=ASecondary,fontSize=10.sp)
   Box(Modifier.clip(CircleShape).background(ABlue).clickable {
    runCatching { context.startActivity(Intent(Intent.ACTION_VIEW,CalendarContract.CONTENT_URI).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
