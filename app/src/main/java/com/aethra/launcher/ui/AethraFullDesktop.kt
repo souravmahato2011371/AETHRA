@@ -4,6 +4,8 @@ package com.aethra.launcher.ui
 
 import android.content.Context
 import android.content.Intent
+import android.media.MediaPlayer
+import android.provider.MediaStore
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.BatteryManager
@@ -14,6 +16,8 @@ import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -55,6 +59,7 @@ import androidx.compose.ui.input.key.*
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -82,6 +87,7 @@ private val AStroke = Color(0x40FFFFFF)
 private enum class DesktopPhase { BOOT, LOCK, DESKTOP }
 private data class MacOSDesktopApp(val id:String,val title:String,val icon:androidx.compose.ui.graphics.vector.ImageVector,val tint:Color)
 private data class DeviceApp(val title:String,val packageName:String,val activity:String,val icon:Drawable)
+private data class AudioTrack(val id:Long,val title:String,val artist:String,val album:String,val uri:Uri)
 private data class DesktopWindow(val id:String,val title:String,val x:Float,val y:Float,val workspace:Int,val minimized:Boolean=false,val maximized:Boolean=false)
 
 private val desktopApps = listOf(
@@ -101,7 +107,8 @@ private val desktopApps = listOf(
  MacOSDesktopApp("android","Android Apps",Icons.Rounded.PhoneAndroid,Color(0xFF83D5A9)),
  MacOSDesktopApp("calculator","Calculator",Icons.Rounded.Calculate,Color(0xFFFFA94D)),
  MacOSDesktopApp("textedit","TextEdit",Icons.Rounded.EditNote,Color(0xFF82B8F4)),
- MacOSDesktopApp("preview","Preview",Icons.Rounded.PictureAsPdf,Color(0xFFB5B7C8))
+ MacOSDesktopApp("preview","Preview",Icons.Rounded.PictureAsPdf,Color(0xFFB5B7C8)),
+ MacOSDesktopApp("music","Music",Icons.Rounded.MusicNote,Color(0xFFE78BB8))
 )
 
 @Composable
@@ -235,6 +242,7 @@ fun MacOSDesktopSimulation27() {
           "textedit" -> NotesContent(textEdit,{textEdit=it;prefs.edit().putString("textedit",it).apply()})
           "calculator" -> CalculatorContent()
           "preview" -> PreviewContent(context)
+          "music" -> MusicContent(context)
           "calendar" -> CalendarContent(context)
           "photos" -> PhotosContent(context)
           "settings" -> SettingsContent(context,wifiPreview,{wifiPreview=it},bluetoothPreview,{bluetoothPreview=it},focusPreview,{focusPreview=it},brightness,{brightness=it})
@@ -836,6 +844,143 @@ private fun CalculatorContent() {
    }
   }
  }
+}
+
+
+@Composable
+private fun MusicContent(context:Context) {
+ val permission=if(android.os.Build.VERSION.SDK_INT>=33) android.Manifest.permission.READ_MEDIA_AUDIO else android.Manifest.permission.READ_EXTERNAL_STORAGE
+ var hasPermission by remember { mutableStateOf(ContextCompat.checkSelfPermission(context,permission)==android.content.pm.PackageManager.PERMISSION_GRANTED) }
+ var tracks by remember { mutableStateOf(emptyList<AudioTrack>()) }
+ var current by remember { mutableStateOf<AudioTrack?>(null) }
+ var playing by remember { mutableStateOf(false) }
+ var loading by remember { mutableStateOf(false) }
+ var error by remember { mutableStateOf<String?>(null) }
+ var player by remember { mutableStateOf<MediaPlayer?>(null) }
+ val requestPermission=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+  hasPermission=granted
+  if(!granted) error="Music access was not granted. You can still choose an audio file from Android."
+ }
+ fun stopPlayback() {
+  runCatching { player?.stop() }
+  runCatching { player?.release() }
+  player=null
+  playing=false
+  current=null
+ }
+ fun play(track:AudioTrack) {
+  stopPlayback()
+  loading=true
+  error=null
+  runCatching {
+   val next=MediaPlayer()
+   player=next
+   next.setOnPreparedListener { media -> loading=false;media.start();playing=true }
+   next.setOnCompletionListener { playing=false;loading=false }
+   next.setOnErrorListener { _,_,_ -> loading=false;playing=false;error="This audio file could not be played.";true }
+   current=track
+   next.setDataSource(context,track.uri)
+   next.prepareAsync()
+  }.onFailure {
+   loading=false
+   playing=false
+   error="Unable to open this audio file."
+   runCatching { player?.release() }
+   player=null
+  }
+ }
+ DisposableEffect(Unit) {
+  onDispose { runCatching { player?.release() };player=null }
+ }
+ LaunchedEffect(hasPermission) {
+  if(hasPermission) {
+   tracks=withContext(Dispatchers.IO) {
+    val result=mutableListOf<AudioTrack>()
+    val collection=MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+    val projection=arrayOf(MediaStore.Audio.Media._ID,MediaStore.Audio.Media.TITLE,MediaStore.Audio.Media.ARTIST,MediaStore.Audio.Media.ALBUM)
+    runCatching {
+     context.contentResolver.query(collection,projection,
+      "\${MediaStore.Audio.Media.IS_MUSIC} != 0",null,
+      "\${MediaStore.Audio.Media.TITLE} COLLATE NOCASE ASC")?.use { cursor ->
+      val idCol=cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
+      val titleCol=cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
+      val artistCol=cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
+      val albumCol=cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
+      while(cursor.moveToNext()) {
+       val id=cursor.getLong(idCol)
+       val title=cursor.getString(titleCol)?.takeIf{it.isNotBlank()} ?: "Unknown track"
+       val artist=cursor.getString(artistCol)?.takeIf{it.isNotBlank()} ?: "Unknown artist"
+       val album=cursor.getString(albumCol)?.takeIf{it.isNotBlank()} ?: "Unknown album"
+       result.add(AudioTrack(id,title,artist,album,Uri.withAppendedPath(collection,id.toString())))
+      }
+     }
+    }
+    result
+   }
+  }
+ }
+ Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+  Row(verticalAlignment=Alignment.CenterVertically) {
+   Column(Modifier.weight(1f)) {
+    Text("Music",color=AWhite,fontSize=24.sp,fontWeight=FontWeight.Light)
+    Text(if(hasPermission) "\${tracks.size} songs on this tablet" else "Your music library",color=ASecondary,fontSize=10.sp)
+   }
+   Icon(Icons.Rounded.Refresh,"Refresh",tint=ABlue,modifier=Modifier.size(21.dp).clickable {
+    if(hasPermission) { hasPermission=false;hasPermission=true } else requestPermission.launch(permission)
+   })
+  }
+  if(!hasPermission) {
+   Column(Modifier.fillMaxWidth().weight(1f),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center) {
+    Icon(Icons.Rounded.LibraryMusic,null,tint=ABlue,modifier=Modifier.size(49.dp))
+    Text("Your music, in one place",color=AWhite,fontSize=17.sp)
+    Text("Allow audio access to browse music stored on this tablet.",color=ASecondary,fontSize=10.sp,textAlign=TextAlign.Center)
+    Box(Modifier.clip(CircleShape).background(ABlue).clickable { requestPermission.launch(permission) }.padding(horizontal=18.dp,vertical=11.dp)) {
+     Text("Allow Music Access",color=Color(0xFF10253A),fontSize=10.sp,fontWeight=FontWeight.Bold)
+    }
+   }
+  } else {
+   if(current!=null) {
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color.White.copy(alpha=.1f)).padding(12.dp),verticalAlignment=Alignment.CenterVertically) {
+     Box(Modifier.size(42.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFF8C4E79)),contentAlignment=Alignment.Center) { Icon(Icons.Rounded.MusicNote,null,tint=AWhite) }
+     Column(Modifier.weight(1f).padding(horizontal=10.dp)) {
+      Text(current!!.title,color=AWhite,fontSize=11.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+      Text(current!!.artist,color=ASecondary,fontSize=9.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+     }
+     if(loading) CircularProgressIndicatorCompat()
+     else Icon(if(playing)Icons.Rounded.PauseCircle else Icons.Rounded.PlayCircle,null,tint=ABlue,modifier=Modifier.size(31.dp).clickable {
+      if(playing) { runCatching { player?.pause() };playing=false } else runCatching { player?.start();playing=true }
+     })
+     Icon(Icons.Rounded.StopCircle,null,tint=ASecondary,modifier=Modifier.padding(start=7.dp).size(25.dp).clickable { stopPlayback() })
+    }
+   }
+   if(error!=null) Text(error!!,color=Color(0xFFFFB4A9),fontSize=9.sp)
+   if(tracks.isEmpty()) {
+    Column(Modifier.fillMaxWidth().weight(1f),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center) {
+     Icon(Icons.Rounded.MusicOff,null,tint=ASecondary,modifier=Modifier.size(38.dp))
+     Text("No music found",color=AWhite,fontSize=15.sp)
+     Text("Add audio files to your device and refresh.",color=ASecondary,fontSize=10.sp)
+    }
+   } else {
+    LazyVerticalGrid(columns=GridCells.Adaptive(220.dp),modifier=Modifier.weight(1f),horizontalArrangement=Arrangement.spacedBy(7.dp),verticalArrangement=Arrangement.spacedBy(7.dp)) {
+     items(tracks,key={it.id}) { track ->
+      Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(11.dp)).background(if(current?.id==track.id)Color(0xFF315A75)else Color.White.copy(alpha=.055f)).clickable { play(track) }.padding(9.dp),verticalAlignment=Alignment.CenterVertically) {
+       Icon(Icons.Rounded.MusicNote,null,tint=if(current?.id==track.id)ABlue else ASecondary,modifier=Modifier.size(22.dp))
+       Column(Modifier.weight(1f).padding(start=9.dp)) {
+        Text(track.title,color=AWhite,fontSize=10.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+        Text(track.artist+" · "+track.album,color=ASecondary,fontSize=8.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+       }
+       if(current?.id==track.id && playing) Icon(Icons.Rounded.Equalizer,null,tint=ABlue,modifier=Modifier.size(17.dp))
+      }
+     }
+    }
+   }
+  }
+ }
+}
+
+@Composable
+private fun CircularProgressIndicatorCompat() {
+ androidx.compose.material3.CircularProgressIndicator(modifier=Modifier.size(22.dp),color=ABlue,strokeWidth=2.dp)
 }
 
 @Composable
