@@ -7,6 +7,8 @@ import android.content.Intent
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.BatteryManager
+import android.provider.Settings
+import android.provider.CalendarContract
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -72,7 +74,12 @@ private val simApps = listOf(
  SimApp("photos","Photos",Icons.Rounded.PhotoLibrary,Color(0xFFCB8CF4)),
  SimApp("terminal","Terminal",Icons.Rounded.Code,Color(0xFF91D6B1)),
  SimApp("store","App Store",Icons.Rounded.Store,Color(0xFF75A9FF)),
- SimApp("settings","Settings",Icons.Rounded.Settings,Color(0xFFAAB8C8))
+ SimApp("settings","Settings",Icons.Rounded.Settings,Color(0xFFAAB8C8)),
+ SimApp("mail","Mail",Icons.Rounded.Mail,Color(0xFF75BCEB)),
+ SimApp("maps","Maps",Icons.Rounded.Map,Color(0xFF73C99C)),
+ SimApp("clock","Clock",Icons.Rounded.AccessTime,Color(0xFF9EAAEA)),
+ SimApp("contacts","Contacts",Icons.Rounded.Contacts,Color(0xFFFFA7B7)),
+ SimApp("reminders","Reminders",Icons.Rounded.Checklist,Color(0xFFFFC56E))
 )
 
 @Composable
@@ -83,8 +90,16 @@ fun MacSimulatorApp() {
  var progress by remember { mutableFloatStateOf(0f) }
  var bootText by remember { mutableStateOf("Starting AETHRA system") }
  var active by remember { mutableStateOf<String?>(null) }
+ val recentApps = remember { mutableStateListOf<String>() }
  var launchpad by remember { mutableStateOf(false) }
  var androidPanel by remember { mutableStateOf(false) }
+ var controlCenter by remember { mutableStateOf(false) }
+ var notificationCenter by remember { mutableStateOf(false) }
+ var spotlight by remember { mutableStateOf(false) }
+ var missionControl by remember { mutableStateOf(false) }
+ var bluetooth by rememberSaveable { mutableStateOf(false) }
+ var focusMode by rememberSaveable { mutableStateOf(false) }
+ var brightnessPreview by rememberSaveable { mutableFloatStateOf(.72f) }
  var query by remember { mutableStateOf("") }
  var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
  var battery by remember { mutableIntStateOf(0) }
@@ -96,7 +111,28 @@ fun MacSimulatorApp() {
  var finder by remember { mutableStateOf("Recents") }
  var wifi by rememberSaveable { mutableStateOf(true) }
  var dark by rememberSaveable { mutableStateOf(true) }
-
+ val preferences = remember(context) { context.getSharedPreferences("aethra_preferences", Context.MODE_PRIVATE) }
+ var savedNotes by remember { mutableStateOf(preferences.getString("notes", "Welcome to AETHRA Notes.\\n\\nA fresh space for your ideas.") ?: "") }
+ val openApp: (String) -> Unit = { id ->
+  if(id=="android") androidPanel=true else {
+   active=id
+   recentApps.remove(id)
+   recentApps.add(0,id)
+   while(recentApps.size>7) recentApps.removeAt(recentApps.lastIndex)
+  }
+  launchpad=false
+  spotlight=false
+  missionControl=false
+  controlCenter=false
+  notificationCenter=false
+ }
+ val launchAndroidApp: (AndroidAppItem) -> Unit = { app ->
+  runCatching {
+   context.startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+    .setClassName(app.packageName,app.activity).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+  }
+  androidPanel=false
+ }
  LaunchedEffect(Unit) {
   val labels=listOf("Starting AETHRA system","Loading Golden Gate desktop","Preparing applications","Almost there")
   for(i in 1..100) {
@@ -130,7 +166,7 @@ fun MacSimulatorApp() {
   AnimatedVisibility(boot,Modifier.fillMaxSize()) { BootAnimation(progress,bootText) }
   AnimatedVisibility(!boot,Modifier.fillMaxSize()) {
    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal=if(wide)22.dp else 10.dp, vertical=8.dp)) {
-    SimMenu(now,battery,{launchpad=true},{active="settings"})
+    SimMenu(now,battery,{launchpad=true},{openApp("settings")},{controlCenter=true},{notificationCenter=true},{spotlight=true})
     Spacer(Modifier.height(12.dp))
     Box(Modifier.weight(1f).fillMaxWidth()) {
      if(wide) {
@@ -153,7 +189,7 @@ fun MacSimulatorApp() {
         Spacer(Modifier.height(16.dp))
         LazyVerticalGrid(columns=GridCells.Adaptive(94.dp),modifier=Modifier.weight(1f),
          horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-         items(simApps,key={it.id}) { SimIcon(it){active=it.id} }
+         items(simApps,key={it.id}) { SimIcon(it){openApp(it.id)} }
          item { SimIcon(SimApp("android","Android Apps",Icons.Rounded.PhoneAndroid,Color(0xFF86D9B0))){androidPanel=true} }
         }
        }
@@ -170,24 +206,29 @@ fun MacSimulatorApp() {
        }
       }
      }
-     AnimatedVisibility(active!=null,Modifier.fillMaxSize()) {
+     if(active!=null) {
       active?.let { id ->
-       SimWindow(id,wide,notes,{notes=it},address,{address=it},terminal,command,{terminal=it},{command=it},
+       SimWindow(id,wide,savedNotes,{ value -> savedNotes=value; preferences.edit().putString("notes",value).apply() },address,{address=it},terminal,command,{terminal=it},{command=it},
         finder,{finder=it},wifi,{wifi=it},dark,{dark=it},{active=null},{androidPanel=true},context)
       }
      }
-     AnimatedVisibility(launchpad,Modifier.fillMaxSize()) {
+     if(launchpad) {
       SimLaunchpad(query,{query=it},{id->if(id=="android")androidPanel=true else active=id;launchpad=false;query=""},{launchpad=false})
      }
-     AnimatedVisibility(androidPanel,Modifier.fillMaxSize()) {
-      AndroidAppsWindow(installed,{androidPanel=false}) { app ->
-       runCatching { context.startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-        .setClassName(app.packageName,app.activity).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-      }
+     if(androidPanel) {
+      AndroidAppsWindow(installed,{androidPanel=false}) { app -> launchAndroidApp(app) }
      }
+     if(controlCenter) ControlCenter(wifi,{wifi=it},bluetooth,{bluetooth=it},focusMode,{focusMode=it},brightnessPreview,{brightnessPreview=it},
+      {openSystemSettings(context,Settings.ACTION_WIFI_SETTINGS)},{openSystemSettings(context,Settings.ACTION_BLUETOOTH_SETTINGS)},
+      {openSystemSettings(context,Settings.ACTION_DISPLAY_SETTINGS)},{controlCenter=false})
+     if(notificationCenter) NotificationCenter(now,{notificationCenter=false}) {
+      openSystemSettings(context,Settings.ACTION_NOTIFICATION_SETTINGS)
+     }
+     if(spotlight) SpotlightPanel(query,{query=it},simApps,installed,{id->openApp(id)}, {app->launchAndroidApp(app)},{spotlight=false;query=""})
+     if(missionControl) MissionControlPanel(recentApps.toList(),{id->openApp(id)},{missionControl=false},{openApp("settings")})
     }
     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.Center) {
-     SimDock({launchpad=true},{active=it},{androidPanel=true})
+     SimDock({launchpad=true},{openApp(it)},{androidPanel=true},{spotlight=true},{missionControl=true})
     }
    }
   }
@@ -236,12 +277,16 @@ private fun SimWallpaper(modifier:Modifier=Modifier) {
 }
 
 @Composable
-private fun SimMenu(now:Long,battery:Int,onLaunch:()->Unit,onSettings:()->Unit) {
+private fun SimMenu(now:Long,battery:Int,onLaunch:()->Unit,onSettings:()->Unit,onControl:()->Unit,onNotifications:()->Unit,onSpotlight:()->Unit) {
  Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Brush.verticalGradient(listOf(Color.White.copy(alpha=.24f),Color.White.copy(alpha=.09f)))).border(1.dp,Color.White.copy(alpha=.24f),RoundedCornerShape(18.dp)).padding(horizontal=12.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically) {
   Text("A",color=SW,fontWeight=FontWeight.Black,fontSize=16.sp,modifier=Modifier.clip(CircleShape).background(Color.White.copy(alpha=.16f)).clickable(onClick=onLaunch).padding(horizontal=8.dp,vertical=3.dp))
   Spacer(Modifier.width(10.dp));Text("AETHRA",color=SW,fontSize=10.sp,fontWeight=FontWeight.Bold,letterSpacing=1.2.sp)
   Spacer(Modifier.width(12.dp));Text("Desktop",color=SW.copy(alpha=.8f),fontSize=10.sp,modifier=Modifier.clickable(onClick=onLaunch))
-  Spacer(Modifier.weight(1f));Icon(Icons.Rounded.Wifi,null,tint=SW,modifier=Modifier.size(14.dp))
+  Text("Spaces",color=SW.copy(alpha=.8f),fontSize=10.sp,modifier=Modifier.padding(start=10.dp).clickable(onClick=onLaunch))
+  Spacer(Modifier.weight(1f));Icon(Icons.Rounded.Search,"Spotlight search",tint=SW,modifier=Modifier.size(17.dp).clickable(onClick=onSpotlight))
+  Spacer(Modifier.width(10.dp));Icon(Icons.Rounded.Tune,"Control Center",tint=SW,modifier=Modifier.size(17.dp).clickable(onClick=onControl))
+  Spacer(Modifier.width(10.dp));Icon(Icons.Rounded.Notifications,"Notification Center",tint=SW,modifier=Modifier.size(17.dp).clickable(onClick=onNotifications))
+  Spacer(Modifier.width(10.dp));Icon(Icons.Rounded.Wifi,null,tint=SW,modifier=Modifier.size(14.dp))
   Spacer(Modifier.width(7.dp));Icon(Icons.Rounded.BatteryFull,null,tint=SW,modifier=Modifier.size(14.dp))
   Text("$battery%",color=SW,fontSize=9.sp);Spacer(Modifier.width(10.dp))
   Text(SimpleDateFormat("EEE d MMM  h:mm a",LocalConfiguration.current.locales[0]).format(Date(now)),color=SW,fontSize=9.sp)
@@ -270,11 +315,13 @@ private fun SimIcon(app:SimApp,onClick:()->Unit) {
 }
 
 @Composable
-private fun SimDock(onLaunchpad:()->Unit,onOpen:(String)->Unit,onAndroid:()->Unit) {
+private fun SimDock(onLaunchpad:()->Unit,onOpen:(String)->Unit,onAndroid:()->Unit,onSpotlight:()->Unit,onMissionControl:()->Unit) {
  Row(Modifier.clip(RoundedCornerShape(23.dp)).background(Brush.verticalGradient(listOf(Color.White.copy(alpha=.25f),Color(0xC9162B40)))).border(1.dp,Color.White.copy(alpha=.3f),RoundedCornerShape(23.dp)).padding(horizontal=9.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.CenterVertically) {
   simApps.take(5).forEach { DockButton(it.name,it.icon,it.tint){onOpen(it.id)} }
   Box(Modifier.width(1.dp).height(34.dp).background(Color.White.copy(alpha=.3f)))
   DockButton("Launchpad",Icons.Rounded.Apps,Color(0xFF8CBDF4),onLaunchpad)
+  DockButton("Spotlight",Icons.Rounded.Search,Color(0xFF9CBAF8),onSpotlight)
+  DockButton("Mission Control",Icons.Rounded.Dashboard,Color(0xFFB7A1F3),onMissionControl)
   DockButton("Android Apps",Icons.Rounded.PhoneAndroid,Color(0xFF83D5A9),onAndroid)
  }
 }
@@ -346,14 +393,16 @@ private fun SimWindow(id:String,wide:Boolean,notes:String,onNotes:(String)->Unit
    Box(Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha=.13f)))
    Column(Modifier.fillMaxSize().padding(15.dp).verticalScroll(rememberScrollState())) {
     when(id) {
-     "finder"->FinderApp(finder,onFinder)
+     "finder"->FinderApp(finder,onFinder,context)
      "safari"->SafariApp(address,onAddress,context)
+     "mail","maps","clock","contacts"->NativeServiceApp(id,context)
+     "reminders"->RemindersApp()
      "notes"->NotesApp(notes,onNotes)
-     "calendar"->CalendarApp()
-     "photos"->PhotosApp()
+     "calendar"->CalendarApp(context)
+     "photos"->PhotosApp(context)
      "terminal"->TerminalApp(command,onCommand,terminal,onTerminal)
      "store"->StoreApp()
-     "settings"->SettingsApp(wifi,onWifi,dark,onDark,onAndroid)
+     "settings"->SettingsApp(wifi,onWifi,dark,onDark,onAndroid,context)
      else->Text("Welcome to AETHRA.",color=SW)
     }
    }
@@ -362,7 +411,7 @@ private fun SimWindow(id:String,wide:Boolean,notes:String,onNotes:(String)->Unit
 }
 
 @Composable
-private fun FinderApp(folder:String,onFolder:(String)->Unit) {
+private fun FinderApp(folder:String,onFolder:(String)->Unit,context:Context) {
  Text("Favourites",color=SM,fontSize=10.sp,letterSpacing=1.sp);Spacer(Modifier.height(10.dp))
  Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(5.dp)) {
   listOf("Recents","Apps","Desktop","Documents","Downloads").forEach { n->Box(Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).background(if(folder==n)Color.White.copy(alpha=.2f)else Color.White.copy(alpha=.08f)).clickable{onFolder(n)}.padding(vertical=12.dp),contentAlignment=Alignment.Center){Text(n,color=SW,fontSize=9.sp)} }
@@ -370,7 +419,10 @@ private fun FinderApp(folder:String,onFolder:(String)->Unit) {
  Spacer(Modifier.height(20.dp));Text(folder,color=SW,fontSize=23.sp,fontWeight=FontWeight.Light)
  val rows=when(folder){"Apps"->simApps.map{it.name};"Desktop"->listOf("Golden Gate Wallpaper","Welcome");"Documents"->listOf("Welcome to AETHRA.txt","Project Notes.txt");"Downloads"->listOf("No recent downloads");else->listOf("Golden Gate Wallpaper","Welcome to AETHRA.txt","Applications")}
  rows.forEach { Row(Modifier.fillMaxWidth().padding(vertical=8.dp),verticalAlignment=Alignment.CenterVertically){Icon(Icons.Rounded.InsertDriveFile,null,tint=SB,modifier=Modifier.size(19.dp));Spacer(Modifier.width(10.dp));Text(it,color=SW,fontSize=12.sp)} }
- Text("Simulated Finder. Your Android files remain in Android storage.",color=SM,fontSize=10.sp)
+ Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color.White.copy(alpha=.1f)).clickable {
+  runCatching { context.startActivity(Intent(Intent.ACTION_OPEN_DOCUMENT).setType("*/*").addCategory(Intent.CATEGORY_OPENABLE)) }
+ }.padding(13.dp)) { Text("Browse files on this tablet  ↗",color=SB,fontSize=12.sp) }
+ Text("Finder is a desktop-style view. File browsing is handed to Android's document picker.",color=SM,fontSize=10.sp)
 }
 
 @Composable
@@ -391,15 +443,21 @@ private fun NotesApp(notes:String,onNotes:(String)->Unit) {
  BasicTextField(notes,onNotes,Modifier.fillMaxWidth().heightIn(min=260.dp).clip(RoundedCornerShape(14.dp)).background(Color.White.copy(alpha=.08f)).padding(14.dp),textStyle=TextStyle(color=SW,fontSize=14.sp,lineHeight=21.sp))
 }
 @Composable
-private fun CalendarApp() {
+private fun CalendarApp(context:Context) {
  val today=java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_MONTH)
  Text("Calendar",color=SW,fontSize=24.sp,fontWeight=FontWeight.Light);Text(SimpleDateFormat("MMMM yyyy",LocalConfiguration.current.locales[0]).format(Date()),color=SM,fontSize=12.sp);Spacer(Modifier.height(12.dp))
  LazyVerticalGrid(columns=GridCells.Fixed(7),modifier=Modifier.height(230.dp)){items((1..31).toList()){d->Box(Modifier.padding(3.dp).aspectRatio(1f).clip(CircleShape).background(if(d==today)SB else Color.White.copy(alpha=.08f)),contentAlignment=Alignment.Center){Text(d.toString(),color=if(d==today)Color(0xFF09243A)else SW,fontSize=11.sp)}}}
- Text("Calendar preview. Android calendar events are not modified.",color=SM,fontSize=10.sp)
+ Text("Open the calendar on this tablet",color=SB,fontSize=12.sp,modifier=Modifier.clickable {
+  runCatching { context.startActivity(Intent(Intent.ACTION_VIEW,CalendarContract.CONTENT_URI)) }
+ }.padding(vertical=10.dp))
+ Text("This preview does not read or alter your calendar events.",color=SM,fontSize=10.sp)
 }
 @Composable
-private fun PhotosApp() {
+private fun PhotosApp(context:Context) {
  Text("Photos",color=SW,fontSize=24.sp,fontWeight=FontWeight.Light);Text("A little gallery of the Golden Gate atmosphere.",color=SM,fontSize=11.sp);Spacer(Modifier.height(14.dp))
+ Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color.White.copy(alpha=.1f)).clickable {
+  runCatching { context.startActivity(Intent(Intent.ACTION_GET_CONTENT).setType("image/*")) }
+ }.padding(13.dp)) { Text("Choose a photo from this tablet  ↗",color=SB,fontSize=12.sp) }
  LazyVerticalGrid(columns=GridCells.Adaptive(130.dp),modifier=Modifier.heightIn(min=220.dp,max=390.dp),horizontalArrangement=Arrangement.spacedBy(9.dp),verticalArrangement=Arrangement.spacedBy(9.dp)){
   items((1..6).toList()){i->Box(Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(14.dp)).background(Brush.linearGradient(listOf(Color(0xFF164B65),Color(0xFFFFA47F).copy(alpha=.8f),Color(0xFF0C2438))),),contentAlignment=Alignment.BottomStart){Text("Golden Gate 0"+i,color=Color.White,fontSize=10.sp,modifier=Modifier.padding(9.dp))}}
  }
@@ -430,10 +488,16 @@ private fun StoreApp() {
  }}
 }
 @Composable
-private fun SettingsApp(wifi:Boolean,onWifi:(Boolean)->Unit,dark:Boolean,onDark:(Boolean)->Unit,onAndroid:()->Unit) {
+private fun SettingsApp(wifi:Boolean,onWifi:(Boolean)->Unit,dark:Boolean,onDark:(Boolean)->Unit,onAndroid:()->Unit,context:Context) {
  Text("System Settings",color=SW,fontSize=24.sp,fontWeight=FontWeight.Light);Text("Personalise your simulated desktop.",color=SM,fontSize=11.sp);Spacer(Modifier.height(14.dp))
  Row(verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("Wi-Fi indicator",color=SW,fontSize=13.sp);Text("Visual simulator setting only",color=SM,fontSize=9.sp)};Switch(wifi,onWifi)}
  Row(verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("Dark appearance",color=SW,fontSize=13.sp);Text("Visual simulator setting only",color=SM,fontSize=9.sp)};Switch(dark,onDark)}
  Text("Android applications",color=SB,fontSize=13.sp,modifier=Modifier.clickable(onClick=onAndroid).padding(vertical=10.dp))
- Text("These controls do not change Android system settings.",color=SM,fontSize=10.sp)
+ listOf("Wi-Fi" to Settings.ACTION_WIFI_SETTINGS,"Bluetooth" to Settings.ACTION_BLUETOOTH_SETTINGS,
+  "Display & brightness" to Settings.ACTION_DISPLAY_SETTINGS,"Notifications" to Settings.ACTION_NOTIFICATION_SETTINGS).forEach { (label,action) ->
+  Row(Modifier.fillMaxWidth().clickable { openSystemSettings(context,action) }.padding(vertical=9.dp),verticalAlignment=Alignment.CenterVertically) {
+   Text(label,color=SW,fontSize=12.sp,modifier=Modifier.weight(1f));Icon(Icons.Rounded.OpenInNew,null,tint=SB,modifier=Modifier.size(15.dp))
+  }
+ }
+ Text("AETHRA handles the desktop shell. Android remains responsible for protected system controls.",color=SM,fontSize=10.sp)
 }
