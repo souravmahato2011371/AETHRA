@@ -189,6 +189,7 @@ fun MacOSDesktopSimulation27() {
     Column(Modifier.fillMaxSize()) {
      MacOSMenuBar(clock,battery,
       { launchpad=true },
+      { openApp("finder") },
       { spotlight=true },
       { controlCenter=true },
       { notificationCenter=true },
@@ -206,7 +207,7 @@ fun MacOSDesktopSimulation27() {
       // Desktop items are deliberately quiet: windows are the primary interaction surface.
       Column(Modifier.align(Alignment.TopStart).padding(start=if(wide)28.dp else 16.dp,top=20.dp),verticalArrangement=Arrangement.spacedBy(15.dp)) {
        DesktopShortcut("Macintosh HD",Icons.Rounded.Computer,Color(0xFFB8D5EB)){openApp("finder")}
-       DesktopShortcut("macOS 27",Icons.Rounded.Folder,Color(0xFF79BCEB)){openApp("finder")}
+       DesktopShortcut("Documents",Icons.Rounded.Folder,Color(0xFF79BCEB)){openApp("finder")}
       }
       windows.filter { !it.minimized && it.workspace==workspace }.forEach { win ->
        key(win.id) {
@@ -237,14 +238,6 @@ fun MacOSDesktopSimulation27() {
         }
        }
       }
-      if(windows.none { !it.minimized && it.workspace==workspace }) {
-       Column(Modifier.align(Alignment.Center),horizontalAlignment=Alignment.CenterHorizontally) {
-        Text("Welcome to macOS 27",color=AWhite,fontSize=if(wide)34.sp else 27.sp,fontWeight=FontWeight.Light)
-        Text("Your desktop. Your space.",color=ASecondary,fontSize=13.sp)
-        Spacer(Modifier.height(13.dp))
-        Text("Double tap an app in the Dock or open Launchpad.",color=ASecondary.copy(alpha=.8f),fontSize=10.sp)
-       }
-      }
       Text("Desktop  $workspace / 4",color=AWhite.copy(alpha=.75f),fontSize=9.sp,
        modifier=Modifier.align(Alignment.BottomEnd).padding(15.dp))
      }
@@ -268,20 +261,46 @@ fun MacOSDesktopSimulation27() {
 @Composable
 private fun MacOSBoot(progress:Float) {
  val p by animateFloatAsState(progress, tween(250),label="boot")
- Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF071322),Color(0xFF101E31),Color(0xFF070B13)))),contentAlignment=Alignment.Center) {
+ Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF08090B),Color(0xFF111317),Color(0xFF050608)))),contentAlignment=Alignment.Center) {
   Column(horizontalAlignment=Alignment.CenterHorizontally) {
-   Box(Modifier.size(76.dp).clip(RoundedCornerShape(23.dp)).background(Brush.linearGradient(listOf(Color(0xFF9AD8F6),Color(0xFF3B6E9B)))),contentAlignment=Alignment.Center) {
-    Text("A",color=Color.White,fontSize=48.sp,fontWeight=FontWeight.Light)
-   }
-   Spacer(Modifier.height(19.dp))
-   Text("macOS 27",color=AWhite,fontSize=23.sp,fontWeight=FontWeight.Light,letterSpacing=6.sp)
+   GoldenGateAppleMark(Modifier.size(67.dp))
+   Spacer(Modifier.height(23.dp))
+   Text("macOS 27",color=AWhite,fontSize=23.sp,fontWeight=FontWeight.Light,letterSpacing=5.sp)
+   Text("GOLDEN GATE",color=ASecondary,fontSize=9.sp,fontWeight=FontWeight.Medium,letterSpacing=3.4.sp)
    Spacer(Modifier.height(38.dp))
-   Box(Modifier.width(150.dp).height(3.dp).clip(CircleShape).background(Color.White.copy(alpha=.15f))) {
-    Box(Modifier.fillMaxHeight().fillMaxWidth(p).background(AWhite.copy(alpha=.9f)))
+   Box(Modifier.width(158.dp).height(3.dp).clip(CircleShape).background(Color.White.copy(alpha=.18f))) {
+    Box(Modifier.fillMaxHeight().fillMaxWidth(p.coerceIn(0f,1f)).background(Color.White.copy(alpha=.92f)))
    }
    Spacer(Modifier.height(11.dp))
-   Text("Starting your desktop",color=ASecondary,fontSize=10.sp,letterSpacing=1.sp)
+   Text("Starting up",color=ASecondary,fontSize=10.sp)
   }
+ }
+}
+
+@Composable
+private fun GoldenGateAppleMark(modifier:Modifier=Modifier) {
+ Canvas(modifier) {
+  val w=size.width
+  val h=size.height
+  val body=Path().apply {
+   moveTo(w*.51f,h*.27f)
+   cubicTo(w*.42f,h*.18f,w*.25f,h*.19f,w*.17f,h*.34f)
+   cubicTo(w*.06f,h*.55f,w*.20f,h*.87f,w*.37f,h*.93f)
+   cubicTo(w*.45f,h*.96f,w*.48f,h*.89f,w*.55f,h*.89f)
+   cubicTo(w*.66f,h*.89f,w*.70f,h*.97f,w*.78f,h*.91f)
+   cubicTo(w*.94f,h*.78f,w*.96f,h*.57f,w*.85f,h*.44f)
+   cubicTo(w*.80f,h*.38f,w*.73f,h*.35f,w*.67f,h*.37f)
+   cubicTo(w*.60f,h*.39f,w*.57f,h*.43f,w*.51f,h*.40f)
+   close()
+  }
+  val leaf=Path().apply {
+   moveTo(w*.55f,h*.24f)
+   cubicTo(w*.55f,h*.12f,w*.67f,h*.04f,w*.79f,h*.08f)
+   cubicTo(w*.78f,h*.20f,w*.68f,h*.28f,w*.55f,h*.27f)
+   close()
+  }
+  drawPath(body,Color.White)
+  drawPath(leaf,Color.White)
  }
 }
 
@@ -292,29 +311,31 @@ private fun MacOSLockScreen(clock:Long,battery:Int,onUnlock:()->Unit,onSetHome:(
  val time=remember(clock){SimpleDateFormat("h:mm",locale).format(Date(clock))}
  Box(Modifier.fillMaxSize()) {
   MacOSWallpaper(Modifier.fillMaxSize())
-  Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x44030A18),Color(0x22030A18),Color(0x99030A18)))))
+  Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x35050912),Color(0x17050912),Color(0x79050912)))))
   Column(Modifier.align(Alignment.Center),horizontalAlignment=Alignment.CenterHorizontally) {
    Text(time,color=Color.White,fontSize=if(LocalConfiguration.current.screenWidthDp>=700)94.sp else 76.sp,fontWeight=FontWeight.ExtraLight,letterSpacing=(-4).sp)
-   Text(date,color=Color.White.copy(alpha=.92f),fontSize=17.sp,fontWeight=FontWeight.Light)
-   Spacer(Modifier.height(34.dp))
-   Box(Modifier.size(58.dp).clip(CircleShape).background(Color.White.copy(alpha=.16f)).border(1.dp,Color.White.copy(alpha=.35f),CircleShape),contentAlignment=Alignment.Center) {
-    Icon(Icons.Rounded.Lock,null,tint=Color.White,modifier=Modifier.size(23.dp))
-   }
-   Spacer(Modifier.height(18.dp))
-   Text("macOS 27",color=Color.White,fontSize=12.sp,letterSpacing=3.sp)
-   Text("Tap to enter your desktop",color=Color.White.copy(alpha=.76f),fontSize=11.sp)
-   Spacer(Modifier.height(16.dp))
-   Box(Modifier.clip(CircleShape).background(Color.White.copy(alpha=.18f)).border(1.dp,Color.White.copy(alpha=.35f),CircleShape)
-    .clickable(onClick=onUnlock).padding(horizontal=25.dp,vertical=12.dp)) {
-    Text("Unlock",color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Medium)
+   Text(date,color=Color.White.copy(alpha=.94f),fontSize=17.sp,fontWeight=FontWeight.Light)
+   Spacer(Modifier.height(37.dp))
+   Box(Modifier.size(76.dp).clip(CircleShape).background(Brush.linearGradient(listOf(Color(0xFFE7D3BE),Color(0xFF9E8D82))))
+    .border(1.dp,Color.White.copy(alpha=.68f),CircleShape),contentAlignment=Alignment.Center) {
+    Icon(Icons.Rounded.Person,null,tint=Color(0xFF3C3938),modifier=Modifier.size(43.dp))
    }
    Spacer(Modifier.height(13.dp))
-   Text("Set macOS 27 as your default Home app",color=Color.White.copy(alpha=.82f),fontSize=10.sp,
+   Text("Guest",color=Color.White,fontSize=14.sp,fontWeight=FontWeight.Medium)
+   Text("macOS 27 Golden Gate",color=Color.White.copy(alpha=.76f),fontSize=10.sp)
+   Spacer(Modifier.height(18.dp))
+   Box(Modifier.clip(CircleShape).background(Color.White.copy(alpha=.22f))
+    .border(1.dp,Color.White.copy(alpha=.58f),CircleShape)
+    .clickable(onClick=onUnlock).padding(horizontal=28.dp,vertical=12.dp)) {
+    Text("Log In",color=Color.White,fontSize=12.sp,fontWeight=FontWeight.SemiBold)
+   }
+   Spacer(Modifier.height(13.dp))
+   Text("Set as default desktop",color=Color.White.copy(alpha=.78f),fontSize=10.sp,
     modifier=Modifier.clickable(onClick=onSetHome))
   }
   Row(Modifier.align(Alignment.BottomCenter).padding(26.dp),verticalAlignment=Alignment.CenterVertically) {
-   Icon(Icons.Rounded.BatteryFull,null,tint=Color.White.copy(alpha=.8f),modifier=Modifier.size(15.dp))
-   Text("  $battery%",color=Color.White.copy(alpha=.8f),fontSize=10.sp)
+   Icon(Icons.Rounded.BatteryFull,null,tint=Color.White.copy(alpha=.86f),modifier=Modifier.size(15.dp))
+   Text("  $battery%",color=Color.White.copy(alpha=.86f),fontSize=10.sp)
   }
  }
 }
@@ -322,36 +343,86 @@ private fun MacOSLockScreen(clock:Long,battery:Int,onUnlock:()->Unit,onSetHome:(
 @Composable
 private fun MacOSWallpaper(modifier:Modifier=Modifier) {
  Canvas(modifier) {
-  val w=size.width;val h=size.height
-  drawRect(Brush.verticalGradient(listOf(Color(0xFF102A48),Color(0xFF416F91),Color(0xFFE1A27D),Color(0xFF182B43))))
-  drawCircle(Brush.radialGradient(listOf(Color(0xFFFFD6A2).copy(alpha=.95f),Color(0xFFFFB47F).copy(alpha=.15f),Color.Transparent),center=Offset(w*.76f,h*.34f),radius=h*.24f),radius=h*.24f,center=Offset(w*.76f,h*.34f))
-  val water=Path().apply{moveTo(0f,h*.68f);lineTo(w,h*.65f);lineTo(w,h);lineTo(0f,h);close()}
-  drawPath(water,Brush.verticalGradient(listOf(Color(0xFF345C78),Color(0xFF101D31)),startY=h*.65f,endY=h))
-  val bridge=Path().apply {
-   moveTo(w*.04f,h*.68f);lineTo(w*.96f,h*.65f);moveTo(w*.22f,h*.67f);lineTo(w*.22f,h*.27f);moveTo(w*.78f,h*.65f);lineTo(w*.78f,h*.25f)
-   moveTo(w*.22f,h*.28f);cubicTo(w*.35f,h*.38f,w*.65f,h*.38f,w*.78f,h*.26f)
+  val w=size.width
+  val h=size.height
+  drawRect(
+   Brush.linearGradient(
+    listOf(Color(0xFF74645C),Color(0xFFC7B4A1),Color(0xFFE8D9C6),Color(0xFF8C7769)),
+    start=Offset(0f,0f),end=Offset(w,h)
+   )
+  )
+  val upperFold=Path().apply {
+   moveTo(-w*.12f,-h*.06f)
+   cubicTo(w*.08f,h*.18f,w*.22f,h*.36f,w*.46f,h*.39f)
+   cubicTo(w*.70f,h*.43f,w*.83f,h*.17f,w*1.12f,h*.13f)
+   lineTo(w*1.12f,h*.34f)
+   cubicTo(w*.86f,h*.38f,w*.73f,h*.63f,w*.43f,h*.56f)
+   cubicTo(w*.18f,h*.50f,w*.01f,h*.27f,-w*.12f,h*.15f)
+   close()
   }
-  drawPath(bridge,Color(0xFFE5A982).copy(alpha=.85f),style=androidx.compose.ui.graphics.drawscope.Stroke(width=(h*.004f).coerceAtLeast(2f),cap=StrokeCap.Round))
-  for(i in 0..14) {
-   val x=w*(.22f+i*.04f)
-   drawLine(Color(0xFFFFD2AC).copy(alpha=.5f),Offset(x,h*.31f),Offset(x,h*.66f),strokeWidth=1.2f)
+  drawPath(upperFold,Brush.linearGradient(
+   listOf(Color(0xFFF7EBDD),Color(0xFFE2D0BC),Color(0xFF9B8575),Color(0xFF5B4D46)),
+   start=Offset(0f,h*.05f),end=Offset(w,h*.65f)
+  ))
+  drawPath(upperFold,Brush.linearGradient(
+   listOf(Color.White.copy(alpha=.72f),Color.Transparent,Color(0xFF3D302B).copy(alpha=.38f)),
+   start=Offset(0f,h*.05f),end=Offset(w,h*.45f)
+  ),style=androidx.compose.ui.graphics.drawscope.Stroke(width=(h*.003f).coerceAtLeast(1.5f)))
+  val lowerFold=Path().apply {
+   moveTo(-w*.12f,h*.61f)
+   cubicTo(w*.13f,h*.78f,w*.42f,h*.94f,w*.64f,h*.78f)
+   cubicTo(w*.83f,h*.63f,w*.90f,h*.49f,w*1.12f,h*.46f)
+   lineTo(w*1.12f,h*.73f)
+   cubicTo(w*.91f,h*.77f,w*.83f,h*1.04f,w*.58f,h*1.06f)
+   cubicTo(w*.31f,h*1.09f,w*.08f,h*.91f,-w*.12f,h*.81f)
+   close()
   }
-  drawRect(Brush.verticalGradient(listOf(Color.Transparent,Color(0x55040B16))),topLeft=Offset.Zero,size=size)
+  drawPath(lowerFold,Brush.linearGradient(
+   listOf(Color(0xFFEBDCCB),Color(0xFFC1A991),Color(0xFF78665B),Color(0xFF403833)),
+   start=Offset(0f,h*.56f),end=Offset(w,h)
+  ))
+  drawPath(lowerFold,Brush.linearGradient(
+   listOf(Color.White.copy(alpha=.65f),Color.Transparent,Color(0xFF382D28).copy(alpha=.4f)),
+   start=Offset(0f,h*.6f),end=Offset(w,h)
+  ),style=androidx.compose.ui.graphics.drawscope.Stroke(width=(h*.0025f).coerceAtLeast(1.2f)))
+  val centralRibbon=Path().apply {
+   moveTo(-w*.08f,h*.42f)
+   cubicTo(w*.20f,h*.58f,w*.42f,h*.67f,w*.61f,h*.56f)
+   cubicTo(w*.79f,h*.46f,w*.87f,h*.31f,w*1.08f,h*.30f)
+   lineTo(w*1.08f,h*.43f)
+   cubicTo(w*.84f,h*.44f,w*.76f,h*.62f,w*.58f,h*.70f)
+   cubicTo(w*.35f,h*.80f,w*.12f,h*.61f,-w*.08f,h*.53f)
+   close()
+  }
+  drawPath(centralRibbon,Brush.linearGradient(
+   listOf(Color(0xFFFAEFE2),Color(0xFFC8B39F),Color(0xFF887366)),
+   start=Offset(0f,h*.38f),end=Offset(w,h*.72f)
+  ))
+  drawCircle(
+   Brush.radialGradient(
+    listOf(Color.White.copy(alpha=.22f),Color(0xFFFFE8D1).copy(alpha=.05f),Color.Transparent),
+    center=Offset(w*.78f,h*.27f),radius=w*.42f
+   ),
+   radius=w*.42f,center=Offset(w*.78f,h*.27f)
+  )
+  drawRect(Brush.verticalGradient(listOf(Color(0x14000000),Color.Transparent,Color(0x33000000))))
  }
 }
 
 @Composable
-private fun MacOSMenuBar(clock:Long,battery:Int,onLaunch:()->Unit,onSearch:()->Unit,onControl:()->Unit,onNotifications:()->Unit,onMission:()->Unit,onHomeSettings:()->Unit) {
+private fun MacOSMenuBar(clock:Long,battery:Int,onLaunch:()->Unit,onFinder:()->Unit,onSearch:()->Unit,onControl:()->Unit,onNotifications:()->Unit,onMission:()->Unit,onHomeSettings:()->Unit) {
  val locale=androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
  val time=remember(clock,locale){SimpleDateFormat("EEE d MMM  h:mm",locale).format(Date(clock))}
- Row(Modifier.fillMaxWidth().height(34.dp).background(Color(0xB817263A)).padding(horizontal=13.dp),verticalAlignment=Alignment.CenterVertically) {
-  Text("A",color=AWhite,fontSize=16.sp,fontWeight=FontWeight.Bold,modifier=Modifier.clickable(onClick=onLaunch))
-  Text("  macOS 27",color=AWhite,fontSize=11.sp,fontWeight=FontWeight.SemiBold,modifier=Modifier.clickable(onClick=onHomeSettings))
-  Spacer(Modifier.width(18.dp))
-  Text("File",color=AWhite.copy(alpha=.86f),fontSize=10.sp,modifier=Modifier.clickable(onClick=onLaunch))
-  Text("  Edit",color=AWhite.copy(alpha=.86f),fontSize=10.sp)
-  Text("  View",color=AWhite.copy(alpha=.86f),fontSize=10.sp,modifier=Modifier.clickable(onClick=onMission))
-  Text("  Window",color=AWhite.copy(alpha=.86f),fontSize=10.sp,modifier=Modifier.clickable(onClick=onMission))
+ Row(Modifier.fillMaxWidth().height(34.dp).background(Color(0xB82D2926)).padding(horizontal=13.dp),verticalAlignment=Alignment.CenterVertically) {
+  GoldenGateAppleMark(Modifier.size(15.dp))
+  Spacer(Modifier.width(11.dp))
+  Text("Finder",color=AWhite,fontSize=10.sp,fontWeight=FontWeight.Bold,modifier=Modifier.clickable(onClick=onFinder))
+  Text("  File",color=AWhite.copy(alpha=.9f),fontSize=10.sp,modifier=Modifier.clickable(onClick=onFinder))
+  Text("  Edit",color=AWhite.copy(alpha=.9f),fontSize=10.sp,modifier=Modifier.clickable(onClick=onFinder))
+  Text("  View",color=AWhite.copy(alpha=.9f),fontSize=10.sp,modifier=Modifier.clickable(onClick=onMission))
+  Text("  Go",color=AWhite.copy(alpha=.9f),fontSize=10.sp,modifier=Modifier.clickable(onClick=onFinder))
+  Text("  Window",color=AWhite.copy(alpha=.9f),fontSize=10.sp,modifier=Modifier.clickable(onClick=onMission))
+  Text("  Help",color=AWhite.copy(alpha=.9f),fontSize=10.sp,modifier=Modifier.clickable(onClick=onSearch))
   Spacer(Modifier.weight(1f))
   Icon(Icons.Rounded.Search,null,tint=AWhite,modifier=Modifier.size(17.dp).clickable(onClick=onSearch))
   Spacer(Modifier.width(11.dp))
@@ -359,12 +430,14 @@ private fun MacOSMenuBar(clock:Long,battery:Int,onLaunch:()->Unit,onSearch:()->U
   Spacer(Modifier.width(11.dp))
   Icon(Icons.Rounded.Notifications,null,tint=AWhite,modifier=Modifier.size(16.dp).clickable(onClick=onNotifications))
   Spacer(Modifier.width(10.dp))
+  Icon(Icons.Rounded.Wifi,null,tint=AWhite,modifier=Modifier.size(15.dp))
+  Spacer(Modifier.width(9.dp))
   Icon(Icons.Rounded.BatteryFull,null,tint=AWhite,modifier=Modifier.size(16.dp))
   Spacer(Modifier.width(4.dp))
   Text("$battery%",color=AWhite,fontSize=9.sp)
   Spacer(Modifier.width(9.dp))
   Text(time,color=AWhite,fontSize=9.sp,maxLines=1)
- }
+ } 
 }
 
 @Composable
