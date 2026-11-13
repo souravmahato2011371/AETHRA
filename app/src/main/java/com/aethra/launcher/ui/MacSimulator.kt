@@ -177,7 +177,7 @@ fun MacSimulatorApp() {
       }
      }
      AnimatedVisibility(launchpad,Modifier.fillMaxSize()) {
-      SimLaunchpad(query,{query=it},{id->active=id;launchpad=false;query=""},{launchpad=false})
+      SimLaunchpad(query,{query=it},{id->if(id=="android")androidPanel=true else active=id;launchpad=false;query=""},{launchpad=false})
      }
      AnimatedVisibility(androidPanel,Modifier.fillMaxSize()) {
       AndroidAppsWindow(installed,{androidPanel=false}) { app ->
