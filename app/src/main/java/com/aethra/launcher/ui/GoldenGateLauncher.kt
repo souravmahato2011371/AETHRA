@@ -50,6 +50,9 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import com.skydoves.cloudy.liquidGlass
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -476,7 +479,23 @@ private fun AppTile(app: DesktopApp, pinned: Boolean, labels: Boolean, onClick: 
 private fun GlassCard(modifier: Modifier = Modifier, corner: Dp = 22.dp, padding: Dp = 0.dp,
     content: @Composable ColumnScope.() -> Unit) {
     val shape = RoundedCornerShape(corner)
-    Column(modifier.shadow(17.dp, shape, clip = false).clip(shape)
+    val density = LocalDensity.current
+    var measuredSize by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
+    val lens = if (measuredSize.width > 0 && measuredSize.height > 0) {
+        Modifier.liquidGlass(
+            lensCenter = androidx.compose.ui.geometry.Offset(measuredSize.width * 0.72f, measuredSize.height * 0.12f),
+            lensSize = androidx.compose.ui.geometry.Size(measuredSize.width * 0.96f, measuredSize.height * 1.10f),
+            cornerRadius = with(density) { corner.toPx() },
+            refraction = 0.17f,
+            curve = 0.24f,
+            dispersion = 0.006f,
+            saturation = 1.12f,
+            contrast = 1.08f,
+            edge = 0.72f
+        )
+    } else Modifier
+    Column(modifier.onSizeChanged { measuredSize = it }.then(lens)
+        .shadow(17.dp, shape, clip = false).clip(shape)
         .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = .22f), Color.White.copy(alpha = .115f), Color.White.copy(alpha = .075f))))
         .border(1.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = .48f), Color.White.copy(alpha = .12f), Color.White.copy(alpha = .23f))), shape)
         .padding(padding), content = content)
