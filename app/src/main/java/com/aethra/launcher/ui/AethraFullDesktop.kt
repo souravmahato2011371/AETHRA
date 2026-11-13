@@ -27,6 +27,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
@@ -40,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -73,25 +75,25 @@ private val AGlass = Color(0xD91B2638)
 private val AStroke = Color(0x40FFFFFF)
 
 private enum class DesktopPhase { BOOT, LOCK, DESKTOP }
-private data class DesktopApp(val id:String,val title:String,val icon:androidx.compose.ui.graphics.vector.ImageVector,val tint:Color)
+private data class AethraDesktopApp(val id:String,val title:String,val icon:androidx.compose.ui.graphics.vector.ImageVector,val tint:Color)
 private data class DeviceApp(val title:String,val packageName:String,val activity:String,val icon:Drawable)
 private data class DesktopWindow(val id:String,val title:String,val x:Float,val y:Float,val workspace:Int,val minimized:Boolean=false,val maximized:Boolean=false)
 
 private val desktopApps = listOf(
- DesktopApp("finder","Finder",Icons.Rounded.Folder,Color(0xFF68BDF4)),
- DesktopApp("browser","Safari",Icons.Rounded.Language,Color(0xFF5DCBE8)),
- DesktopApp("notes","Notes",Icons.Rounded.Notes,Color(0xFFFFD66B)),
- DesktopApp("calendar","Calendar",Icons.Rounded.CalendarMonth,Color(0xFFFF777C)),
- DesktopApp("photos","Photos",Icons.Rounded.PhotoLibrary,Color(0xFFCB8CF4)),
- DesktopApp("settings","System Settings",Icons.Rounded.Settings,Color(0xFFAAB8C8)),
- DesktopApp("mail","Mail",Icons.Rounded.Mail,Color(0xFF75BCEB)),
- DesktopApp("maps","Maps",Icons.Rounded.Map,Color(0xFF73C99C)),
- DesktopApp("clock","Clock",Icons.Rounded.AccessTime,Color(0xFF9EAAEA)),
- DesktopApp("contacts","Contacts",Icons.Rounded.Contacts,Color(0xFFFFA7B7)),
- DesktopApp("reminders","Reminders",Icons.Rounded.Checklist,Color(0xFFFFC56E)),
- DesktopApp("terminal","Terminal",Icons.Rounded.Code,Color(0xFF91D6B1)),
- DesktopApp("store","App Store",Icons.Rounded.Store,Color(0xFF75A9FF)),
- DesktopApp("android","Android Apps",Icons.Rounded.PhoneAndroid,Color(0xFF83D5A9))
+ AethraDesktopApp("finder","Finder",Icons.Rounded.Folder,Color(0xFF68BDF4)),
+ AethraDesktopApp("browser","Safari",Icons.Rounded.Language,Color(0xFF5DCBE8)),
+ AethraDesktopApp("notes","Notes",Icons.Rounded.Notes,Color(0xFFFFD66B)),
+ AethraDesktopApp("calendar","Calendar",Icons.Rounded.CalendarMonth,Color(0xFFFF777C)),
+ AethraDesktopApp("photos","Photos",Icons.Rounded.PhotoLibrary,Color(0xFFCB8CF4)),
+ AethraDesktopApp("settings","System Settings",Icons.Rounded.Settings,Color(0xFFAAB8C8)),
+ AethraDesktopApp("mail","Mail",Icons.Rounded.Mail,Color(0xFF75BCEB)),
+ AethraDesktopApp("maps","Maps",Icons.Rounded.Map,Color(0xFF73C99C)),
+ AethraDesktopApp("clock","Clock",Icons.Rounded.AccessTime,Color(0xFF9EAAEA)),
+ AethraDesktopApp("contacts","Contacts",Icons.Rounded.Contacts,Color(0xFFFFA7B7)),
+ AethraDesktopApp("reminders","Reminders",Icons.Rounded.Checklist,Color(0xFFFFC56E)),
+ AethraDesktopApp("terminal","Terminal",Icons.Rounded.Code,Color(0xFF91D6B1)),
+ AethraDesktopApp("store","App Store",Icons.Rounded.Store,Color(0xFF75A9FF)),
+ AethraDesktopApp("android","Android Apps",Icons.Rounded.PhoneAndroid,Color(0xFF83D5A9))
 )
 
 @Composable
@@ -429,7 +431,7 @@ private fun AethraWindow(win:DesktopWindow,front:Boolean,screenW:androidx.compos
 }
 
 @Composable
-private fun AethraLaunchpad(query:String,onQuery:(String)->Unit,apps:List<DesktopApp>,installed:List<DeviceApp>,open:(String)->Unit,launch:(DeviceApp)->Unit,onClose:()->Unit) {
+private fun AethraLaunchpad(query:String,onQuery:(String)->Unit,apps:List<AethraDesktopApp>,installed:List<DeviceApp>,open:(String)->Unit,launch:(DeviceApp)->Unit,onClose:()->Unit) {
  Box(Modifier.fillMaxSize().background(Color(0xCC071321)).clickable(onClick=onClose).padding(15.dp),contentAlignment=Alignment.Center) {
   Column(Modifier.fillMaxWidth().fillMaxHeight(.92f).widthIn(max=760.dp).clip(RoundedCornerShape(24.dp)).background(Color(0xE51B2A3D)).border(1.dp,AStroke,RoundedCornerShape(24.dp)).clickable(enabled=false){ }.padding(20.dp)) {
    Row(verticalAlignment=Alignment.CenterVertically) {
@@ -455,8 +457,8 @@ private fun AethraLaunchpad(query:String,onQuery:(String)->Unit,apps:List<Deskto
 }
 
 @Composable
-private fun AethraSpotlight(query:String,onQuery:(String)->Unit,apps:List<DesktopApp>,installed:List<DeviceApp>,open:(String)->Unit,launch:(DeviceApp)->Unit,onClose:()->Unit) {
- Box(Modifier.fillMaxSize().background(Color(0x99030A13)).clickable(onClick=onClose).padding(top=45.dp,horizontal=14.dp),contentAlignment=Alignment.TopCenter) {
+private fun AethraSpotlight(query:String,onQuery:(String)->Unit,apps:List<AethraDesktopApp>,installed:List<DeviceApp>,open:(String)->Unit,launch:(DeviceApp)->Unit,onClose:()->Unit) {
+ Box(Modifier.fillMaxSize().background(Color(0x99030A13)).clickable(onClick=onClose).padding(top=45.dp).padding(horizontal=14.dp),contentAlignment=Alignment.TopCenter) {
   Column(Modifier.fillMaxWidth().widthIn(max=570.dp).clip(RoundedCornerShape(17.dp)).background(Color(0xF0253549)).border(1.dp,AStroke,RoundedCornerShape(17.dp)).clickable(enabled=false){}.padding(15.dp)) {
    Row(verticalAlignment=Alignment.CenterVertically) {
     Icon(Icons.Rounded.Search,null,tint=ABlue)
