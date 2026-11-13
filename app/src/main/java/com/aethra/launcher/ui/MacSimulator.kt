@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.BatteryManager
 import android.provider.Settings
 import android.provider.CalendarContract
+import android.provider.ContactsContract
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -31,6 +32,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Switch
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -500,4 +502,225 @@ private fun SettingsApp(wifi:Boolean,onWifi:(Boolean)->Unit,dark:Boolean,onDark:
   }
  }
  Text("AETHRA handles the desktop shell. Android remains responsible for protected system controls.",color=SM,fontSize=10.sp)
+}
+
+
+private fun openSystemSettings(context:Context, action:String) {
+ runCatching { context.startActivity(Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+}
+
+@Composable
+private fun ControlCenter(
+ wifi:Boolean,onWifi:(Boolean)->Unit,
+ bluetooth:Boolean,onBluetooth:(Boolean)->Unit,
+ focus:Boolean,onFocus:(Boolean)->Unit,
+ brightness:Float,onBrightness:(Float)->Unit,
+ onWifiSettings:()->Unit,onBluetoothSettings:()->Unit,onDisplaySettings:()->Unit,onClose:()->Unit
+) {
+ Box(Modifier.fillMaxSize().background(Color(0x66020A12)).clickable(onClick=onClose).padding(9.dp),contentAlignment=Alignment.TopEnd) {
+  GlassPanel(Modifier.fillMaxWidth(.96f).widthIn(max=390.dp).clickable(enabled=false){},22.dp,16.dp) {
+   Row(verticalAlignment=Alignment.CenterVertically) {
+    Column(Modifier.weight(1f)) {
+     Text("Control Center",color=SW,fontSize=22.sp,fontWeight=FontWeight.Light)
+     Text("Quick controls for your AETHRA desktop",color=SM,fontSize=9.sp)
+    }
+    Icon(Icons.Rounded.Close,"Close",tint=SW,modifier=Modifier.size(22.dp).clickable(onClick=onClose))
+   }
+   Spacer(Modifier.height(14.dp))
+   Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+    ControlTile("Wi-Fi",if(wifi)"Connected" else "Off",Icons.Rounded.Wifi,wifi,{onWifi(!wifi)},Modifier.weight(1f))
+    ControlTile("Bluetooth",if(bluetooth)"On" else "Off",Icons.Rounded.Bluetooth,bluetooth,{onBluetooth(!bluetooth)},Modifier.weight(1f))
+   }
+   Spacer(Modifier.height(8.dp))
+   Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+    ControlTile("Focus",if(focus)"On" else "Off",Icons.Rounded.DoNotDisturbOn,focus,{onFocus(!focus)},Modifier.weight(1f))
+    ControlTile("Airplane mode","Android setting",Icons.Rounded.Flight, false,onWifiSettings,Modifier.weight(1f))
+   }
+   Spacer(Modifier.height(13.dp))
+   Text("DISPLAY BRIGHTNESS PREVIEW",color=SM,fontSize=9.sp,letterSpacing=1.sp)
+   Slider(value=brightness,onValueChange=onBrightness)
+   Text("This slider previews the AETHRA panel only. Use Android Display settings to change your tablet's actual brightness.",color=SM,fontSize=9.sp,lineHeight=14.sp)
+   Spacer(Modifier.height(9.dp))
+   Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color.White.copy(alpha=.09f)).clickable(onClick=onWifiSettings).padding(12.dp),verticalAlignment=Alignment.CenterVertically) {
+    Icon(Icons.Rounded.Wifi,null,tint=SB);Spacer(Modifier.width(10.dp));Text("Network settings",color=SW,fontSize=11.sp,modifier=Modifier.weight(1f));Icon(Icons.Rounded.OpenInNew,null,tint=SM,modifier=Modifier.size(14.dp))
+   }
+   Spacer(Modifier.height(7.dp))
+   Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color.White.copy(alpha=.09f)).clickable(onClick=onBluetoothSettings).padding(12.dp),verticalAlignment=Alignment.CenterVertically) {
+    Icon(Icons.Rounded.Bluetooth,null,tint=SB);Spacer(Modifier.width(10.dp));Text("Bluetooth settings",color=SW,fontSize=11.sp,modifier=Modifier.weight(1f));Icon(Icons.Rounded.OpenInNew,null,tint=SM,modifier=Modifier.size(14.dp))
+   }
+   Spacer(Modifier.height(7.dp))
+   Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color.White.copy(alpha=.09f)).clickable(onClick=onDisplaySettings).padding(12.dp),verticalAlignment=Alignment.CenterVertically) {
+    Icon(Icons.Rounded.Brightness6,null,tint=SB);Spacer(Modifier.width(10.dp));Text("Display & brightness",color=SW,fontSize=11.sp,modifier=Modifier.weight(1f));Icon(Icons.Rounded.OpenInNew,null,tint=SM,modifier=Modifier.size(14.dp))
+   }
+  }
+ }
+}
+
+@Composable
+private fun ControlTile(
+ title:String,subtitle:String,icon:androidx.compose.ui.graphics.vector.ImageVector,
+ active:Boolean,onClick:()->Unit,modifier:Modifier=Modifier
+) {
+ Column(modifier.clip(RoundedCornerShape(15.dp)).background(if(active)Color(0xFF397AA0).copy(alpha=.52f)else Color.White.copy(alpha=.1f))
+  .clickable(onClick=onClick).padding(12.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+  Icon(icon,null,tint=SW,modifier=Modifier.size(21.dp))
+  Text(title,color=SW,fontSize=11.sp,fontWeight=FontWeight.SemiBold)
+  Text(subtitle,color=SM,fontSize=9.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+ }
+}
+
+@Composable
+private fun NotificationCenter(now:Long,onClose:()->Unit,onAndroidNotifications:()->Unit) {
+ Box(Modifier.fillMaxSize().background(Color(0x66020A12)).clickable(onClick=onClose).padding(9.dp),contentAlignment=Alignment.TopEnd) {
+  GlassPanel(Modifier.fillMaxWidth(.96f).widthIn(max=380.dp),22.dp,16.dp) {
+   Row(verticalAlignment=Alignment.CenterVertically) {
+    Column(Modifier.weight(1f)) {
+     Text("Notification Center",color=SW,fontSize=21.sp,fontWeight=FontWeight.Light)
+     Text(SimpleDateFormat("EEEE, d MMMM",Locale.getDefault()).format(Date(now)),color=SM,fontSize=10.sp)
+    }
+    Icon(Icons.Rounded.Close,"Close",tint=SW,modifier=Modifier.size(22.dp).clickable(onClick=onClose))
+   }
+   Spacer(Modifier.height(15.dp))
+   Text(SimpleDateFormat("h:mm",Locale.getDefault()).format(Date(now)),color=SW,fontSize=48.sp,fontWeight=FontWeight.ExtraLight)
+   Text("You’re all caught up",color=SW,fontSize=14.sp,fontWeight=FontWeight.Medium)
+   Text("AETHRA does not read Android notifications. Your device keeps notification access under Android’s control.",color=SM,fontSize=10.sp,lineHeight=15.sp)
+   Spacer(Modifier.height(12.dp))
+   Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color.White.copy(alpha=.1f)).clickable(onClick=onAndroidNotifications).padding(12.dp),verticalAlignment=Alignment.CenterVertically) {
+    Icon(Icons.Rounded.Notifications,null,tint=SB);Spacer(Modifier.width(9.dp));Text("Open Android notification settings",color=SW,fontSize=11.sp,modifier=Modifier.weight(1f));Icon(Icons.Rounded.OpenInNew,null,tint=SM,modifier=Modifier.size(14.dp))
+   }
+  }
+ }
+}
+
+@Composable
+private fun SpotlightPanel(
+ query:String,onQuery:(String)->Unit,
+ apps:List<SimApp>,installed:List<AndroidAppItem>,
+ onOpen:(String)->Unit,onLaunchAndroid:(AndroidAppItem)->Unit,onClose:()->Unit
+) {
+ val matches=apps.filter { query.isBlank() || it.name.contains(query,true) }
+ val nativeMatches=installed.filter { query.isNotBlank() && it.name.contains(query,true) }.take(8)
+ Box(Modifier.fillMaxSize().background(Color(0xB9071422)).clickable(onClick=onClose).padding(12.dp),contentAlignment=Alignment.TopCenter) {
+  GlassPanel(Modifier.fillMaxWidth().widthIn(max=570.dp).clickable(enabled=false){},24.dp,16.dp) {
+   Row(verticalAlignment=Alignment.CenterVertically) {
+    Icon(Icons.Rounded.Search,null,tint=SB,modifier=Modifier.size(21.dp))
+    Spacer(Modifier.width(10.dp))
+    BasicTextField(query,onQuery,Modifier.weight(1f),singleLine=true,textStyle=TextStyle(color=SW,fontSize=16.sp),decorationBox={inner->
+     if(query.isEmpty())Text("Search apps on this desktop and tablet",color=SM,fontSize=14.sp)
+     inner()
+    })
+    Icon(Icons.Rounded.Close,"Close",tint=SW,modifier=Modifier.size(20.dp).clickable(onClick=onClose))
+   }
+   Spacer(Modifier.height(12.dp))
+   if(query.isBlank()) Text("SUGGESTED AETHRA APPS",color=SM,fontSize=9.sp,letterSpacing=1.sp)
+   matches.forEach { app ->
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable { onOpen(app.id) }.padding(vertical=7.dp,horizontal=5.dp),verticalAlignment=Alignment.CenterVertically) {
+     Box(Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(app.tint.copy(alpha=.32f)),contentAlignment=Alignment.Center){Icon(app.icon,null,tint=SW,modifier=Modifier.size(19.dp))}
+     Spacer(Modifier.width(10.dp));Text(app.name,color=SW,fontSize=12.sp,modifier=Modifier.weight(1f))
+     Text("AETHRA",color=SM,fontSize=8.sp)
+    }
+   }
+   if(nativeMatches.isNotEmpty()) {
+    Spacer(Modifier.height(6.dp));Text("APPS ON THIS TABLET",color=SM,fontSize=9.sp,letterSpacing=1.sp)
+    nativeMatches.forEach { app ->
+     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable { onLaunchAndroid(app) }.padding(vertical=7.dp,horizontal=5.dp),verticalAlignment=Alignment.CenterVertically) {
+      Icon(Icons.Rounded.Android,null,tint=SB,modifier=Modifier.size(25.dp));Spacer(Modifier.width(10.dp))
+      Text(app.name,color=SW,fontSize=12.sp,modifier=Modifier.weight(1f));Text("OPEN",color=SM,fontSize=8.sp)
+     }
+    }
+   }
+   if(query.isNotBlank() && matches.isEmpty() && nativeMatches.isEmpty()) Text("No matching apps found.",color=SM,fontSize=11.sp)
+  }
+ }
+}
+
+@Composable
+private fun MissionControlPanel(recent:List<String>,onOpen:(String)->Unit,onClose:()->Unit,onSettings:()->Unit) {
+ Box(Modifier.fillMaxSize().background(Color(0xCE061321)).clickable(onClick=onClose).padding(12.dp),contentAlignment=Alignment.Center) {
+  GlassPanel(Modifier.fillMaxWidth().fillMaxHeight(.9f).widthIn(max=650.dp).clickable(enabled=false){},25.dp,17.dp) {
+   Row(verticalAlignment=Alignment.CenterVertically) {
+    Column(Modifier.weight(1f)) {
+     Text("Mission Control",color=SW,fontSize=25.sp,fontWeight=FontWeight.Light)
+     Text("YOUR OPEN & RECENT AETHRA APPS",color=SM,fontSize=9.sp,letterSpacing=1.sp)
+    }
+    Icon(Icons.Rounded.Close,"Close",tint=SW,modifier=Modifier.size(22.dp).clickable(onClick=onClose))
+   }
+   Spacer(Modifier.height(15.dp))
+   if(recent.isEmpty()) {
+    Text("Your desktop is clear.",color=SW,fontSize=16.sp)
+    Text("Open an app and it will appear here for quick switching.",color=SM,fontSize=11.sp)
+   } else {
+    LazyVerticalGrid(columns=GridCells.Adaptive(140.dp),modifier=Modifier.weight(1f),horizontalArrangement=Arrangement.spacedBy(9.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+     items(recent,key={it}) { id ->
+      val app=simApps.firstOrNull{it.id==id}
+      if(app!=null) Column(Modifier.clip(RoundedCornerShape(15.dp)).background(Color.White.copy(alpha=.1f)).clickable{onOpen(id)}.padding(13.dp),verticalArrangement=Arrangement.spacedBy(9.dp)) {
+       Box(Modifier.fillMaxWidth().height(75.dp).clip(RoundedCornerShape(11.dp)).background(Brush.linearGradient(listOf(app.tint.copy(alpha=.65f),Color(0xFF172B43)))),contentAlignment=Alignment.Center) {
+        Icon(app.icon,null,tint=Color.White,modifier=Modifier.size(31.dp))
+       }
+       Text(app.name,color=SW,fontSize=11.sp,fontWeight=FontWeight.Medium)
+       Text("Switch to app",color=SM,fontSize=9.sp)
+      }
+     }
+    }
+   }
+   Spacer(Modifier.height(12.dp))
+   Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color.White.copy(alpha=.1f)).clickable(onClick=onSettings).padding(12.dp),verticalAlignment=Alignment.CenterVertically) {
+    Icon(Icons.Rounded.Settings,null,tint=SB);Spacer(Modifier.width(8.dp));Text("System Settings",color=SW,fontSize=11.sp)
+   }
+  }
+ }
+}
+
+@Composable
+private fun NativeServiceApp(id:String,context:Context) {
+ val title=when(id){"mail"->"Mail";"maps"->"Maps";"clock"->"Clock";else->"Contacts"}
+ val description=when(id) {
+  "mail"->"Compose an email using a mail app installed on your tablet."
+  "maps"->"Open a map app using Android’s map intent."
+  "clock"->"Open your tablet’s alarm and clock app."
+  else->"Open the contacts app installed on your tablet."
+ }
+ val icon=when(id) {
+  "mail"->Icons.Rounded.Mail
+  "maps"->Icons.Rounded.Map
+  "clock"->Icons.Rounded.AccessTime
+  else->Icons.Rounded.Contacts
+ }
+ val intent=when(id) {
+  "mail"->Intent(Intent.ACTION_SENDTO,Uri.parse("mailto:"))
+  "maps"->Intent(Intent.ACTION_VIEW,Uri.parse("geo:0,0?q="))
+  "clock"->Intent(android.provider.AlarmClock.ACTION_SHOW_ALARMS)
+  else->Intent(Intent.ACTION_VIEW,ContactsContract.Contacts.CONTENT_URI)
+ }
+ Column(Modifier.fillMaxWidth(),horizontalAlignment=Alignment.Start) {
+  Box(Modifier.size(60.dp).clip(RoundedCornerShape(17.dp)).background(Color.White.copy(alpha=.13f)),contentAlignment=Alignment.Center){Icon(icon,null,tint=SB,modifier=Modifier.size(32.dp))}
+  Spacer(Modifier.height(13.dp));Text(title,color=SW,fontSize=25.sp,fontWeight=FontWeight.Light)
+  Text(description,color=SM,fontSize=12.sp,lineHeight=17.sp)
+  Spacer(Modifier.height(15.dp))
+  Box(Modifier.clip(CircleShape).background(SB).clickable {
+   runCatching { context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+  }.padding(horizontal=18.dp,vertical=11.dp)) { Text("Open Android app",color=Color(0xFF09243A),fontSize=11.sp,fontWeight=FontWeight.Bold) }
+  Spacer(Modifier.height(8.dp));Text("AETHRA provides the desktop app icon and hands the task to Android. No account or data is copied by this simulator.",color=SM,fontSize=10.sp,lineHeight=15.sp)
+ }
+}
+
+@Composable
+private fun RemindersApp() {
+ var input by rememberSaveable { mutableStateOf("") }
+ var tasks by rememberSaveable { mutableStateOf(listOf<String>()) }
+ Text("Reminders",color=SW,fontSize=24.sp,fontWeight=FontWeight.Light)
+ Text("A simple local checklist for this session.",color=SM,fontSize=10.sp)
+ Spacer(Modifier.height(12.dp))
+ Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+  BasicTextField(input,{input=it},Modifier.weight(1f).clip(RoundedCornerShape(11.dp)).background(Color.White.copy(alpha=.1f)).padding(12.dp),singleLine=true,textStyle=TextStyle(color=SW,fontSize=12.sp),decorationBox={inner->if(input.isEmpty())Text("Add a reminder",color=SM,fontSize=12.sp);inner()})
+  Box(Modifier.clip(CircleShape).background(SB).clickable { if(input.isNotBlank()) { tasks=tasks+input.trim();input="" } }.padding(horizontal=14.dp,vertical=11.dp)) { Text("Add",color=Color(0xFF09243A),fontSize=11.sp,fontWeight=FontWeight.Bold) }
+ }
+ Spacer(Modifier.height(12.dp))
+ tasks.forEachIndexed { index,task ->
+  Row(Modifier.fillMaxWidth().padding(vertical=6.dp),verticalAlignment=Alignment.CenterVertically) {
+   Text(task,color=SW,fontSize=12.sp,modifier=Modifier.weight(1f))
+   Icon(Icons.Rounded.CheckCircle,"Complete reminder",tint=SB,modifier=Modifier.size(18.dp).clickable { tasks=tasks.filterIndexed { i,_->i!=index } })
+  }
+ }
+ if(tasks.isEmpty()) Text("Nothing on your list yet.",color=SM,fontSize=11.sp)
 }
