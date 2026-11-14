@@ -771,7 +771,13 @@ private fun BrowserContent(context:Context) {
  fun navigate() {
   val raw = address.trim()
   if(raw.isBlank()) return
-  val target = if(raw.contains("://")) raw else "https://$raw"
+  val hasScheme = raw.contains("://")
+  val looksLikeHost = !raw.contains(" ") && (raw == "localhost" || raw.contains("."))
+  val target = when {
+   hasScheme -> raw
+   looksLikeHost -> "https://$raw"
+   else -> "https://duckduckgo.com/?q=" + Uri.encode(raw)
+  }
   val uri = Uri.parse(target)
   if(uri.scheme == "http" || uri.scheme == "https") {
    runCatching { webView.loadUrl(target) }
@@ -789,7 +795,7 @@ private fun BrowserContent(context:Context) {
    BasicTextField(address,{address=it},Modifier.weight(1f).clip(RoundedCornerShape(10.dp))
     .background(Color.White.copy(alpha=.11f)).padding(horizontal=10.dp,vertical=10.dp),
     singleLine=true,textStyle=TextStyle(color=AWhite,fontSize=11.sp),
-    decorationBox={inner->if(address.isEmpty())Text("Search or enter website",color=ASecondary,fontSize=11.sp);inner()})
+    decorationBox={inner->if(address.isEmpty())Text("Search DuckDuckGo or enter website",color=ASecondary,fontSize=11.sp);inner()})
    Box(Modifier.clip(CircleShape).background(ABlue).clickable(onClick={navigate()}).padding(10.dp)) {
     Icon(Icons.Rounded.ArrowForward,null,tint=Color(0xFF10253A),modifier=Modifier.size(15.dp))
    }
@@ -803,10 +809,10 @@ private fun BrowserContent(context:Context) {
    Column(Modifier.fillMaxWidth().weight(1f).padding(top=25.dp),horizontalAlignment=Alignment.CenterHorizontally,
     verticalArrangement=Arrangement.spacedBy(12.dp)) {
     Icon(Icons.Rounded.Language,null,tint=ABlue,modifier=Modifier.size(48.dp))
-    Text("A browser for your desktop",color=AWhite,fontSize=20.sp,fontWeight=FontWeight.Light)
-    Text("Search the web or open a website. Pages render inside this window.",color=ASecondary,fontSize=10.sp,textAlign=TextAlign.Center)
+    Text("Safari",color=AWhite,fontSize=24.sp,fontWeight=FontWeight.Light)
+    Text("Search privately with DuckDuckGo, or enter a website address.",color=ASecondary,fontSize=10.sp,textAlign=TextAlign.Center)
     Row(horizontalArrangement=Arrangement.spacedBy(7.dp)) {
-     listOf("Apple" to "https://www.apple.com","Wikipedia" to "https://www.wikipedia.org","OpenAI" to "https://www.openai.com").forEach { (label,url) ->
+     listOf("DuckDuckGo" to "https://duckduckgo.com","Apple" to "https://www.apple.com","Wikipedia" to "https://www.wikipedia.org","OpenAI" to "https://www.openai.com").forEach { (label,url) ->
       Box(Modifier.clip(CircleShape).background(Color.White.copy(alpha=.1f)).clickable { address=url;webView.loadUrl(url) }.padding(horizontal=12.dp,vertical=8.dp)) {
        Text(label,color=AWhite,fontSize=9.sp)
       }
