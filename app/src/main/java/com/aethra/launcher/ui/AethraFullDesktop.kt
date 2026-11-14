@@ -63,6 +63,7 @@ import androidx.compose.ui.input.key.*
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.core.content.ContextCompat
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -90,30 +91,30 @@ private val AGlass = Color(0xD91B2638)
 private val AStroke = Color(0x40FFFFFF)
 
 private enum class DesktopPhase { BOOT, LOCK, DESKTOP }
-private data class MacOSDesktopApp(val id:String,val title:String,val icon:androidx.compose.ui.graphics.vector.ImageVector,val tint:Color)
+private data class MacOSDesktopApp(val id:String,val title:String,val icon:androidx.compose.ui.graphics.vector.ImageVector,val tint:Color,val asset:Int)
 private data class DeviceApp(val title:String,val packageName:String,val activity:String,val icon:Drawable)
 private data class AudioTrack(val id:Long,val title:String,val artist:String,val album:String,val uri:Uri)
 private data class DesktopWindow(val id:String,val title:String,val x:Float,val y:Float,val workspace:Int,val minimized:Boolean=false,val maximized:Boolean=false,val opening:Boolean=false)
 
 private val desktopApps = listOf(
- MacOSDesktopApp("finder","Finder",Icons.Rounded.Folder,Color(0xFF68BDF4)),
- MacOSDesktopApp("browser","Safari",Icons.Rounded.Language,Color(0xFF5DCBE8)),
- MacOSDesktopApp("notes","Notes",Icons.Rounded.Notes,Color(0xFFFFD66B)),
- MacOSDesktopApp("calendar","Calendar",Icons.Rounded.CalendarMonth,Color(0xFFFF777C)),
- MacOSDesktopApp("photos","Photos",Icons.Rounded.PhotoLibrary,Color(0xFFCB8CF4)),
- MacOSDesktopApp("settings","System Settings",Icons.Rounded.Settings,Color(0xFFAAB8C8)),
- MacOSDesktopApp("mail","Mail",Icons.Rounded.Mail,Color(0xFF75BCEB)),
- MacOSDesktopApp("maps","Maps",Icons.Rounded.Map,Color(0xFF73C99C)),
- MacOSDesktopApp("clock","Clock",Icons.Rounded.AccessTime,Color(0xFF9EAAEA)),
- MacOSDesktopApp("contacts","Contacts",Icons.Rounded.Contacts,Color(0xFFFFA7B7)),
- MacOSDesktopApp("reminders","Reminders",Icons.Rounded.Checklist,Color(0xFFFFC56E)),
- MacOSDesktopApp("terminal","Terminal",Icons.Rounded.Code,Color(0xFF91D6B1)),
- MacOSDesktopApp("store","App Store",Icons.Rounded.Store,Color(0xFF75A9FF)),
- MacOSDesktopApp("android","Android Apps",Icons.Rounded.PhoneAndroid,Color(0xFF83D5A9)),
- MacOSDesktopApp("calculator","Calculator",Icons.Rounded.Calculate,Color(0xFFFFA94D)),
- MacOSDesktopApp("textedit","TextEdit",Icons.Rounded.EditNote,Color(0xFF82B8F4)),
- MacOSDesktopApp("preview","Preview",Icons.Rounded.PictureAsPdf,Color(0xFFB5B7C8)),
- MacOSDesktopApp("music","Music",Icons.Rounded.MusicNote,Color(0xFFE78BB8))
+ MacOSDesktopApp("finder","Finder",Icons.Rounded.Folder,Color(0xFF68BDF4),R.drawable.aethra_finder),
+ MacOSDesktopApp("browser","Safari",Icons.Rounded.Language,Color(0xFF5DCBE8),R.drawable.aethra_safari),
+ MacOSDesktopApp("notes","Notes",Icons.Rounded.Notes,Color(0xFFFFD66B),R.drawable.aethra_notes),
+ MacOSDesktopApp("calendar","Calendar",Icons.Rounded.CalendarMonth,Color(0xFFFF777C),R.drawable.aethra_calendar),
+ MacOSDesktopApp("photos","Photos",Icons.Rounded.PhotoLibrary,Color(0xFFCB8CF4),R.drawable.aethra_photos),
+ MacOSDesktopApp("settings","System Settings",Icons.Rounded.Settings,Color(0xFFAAB8C8),R.drawable.aethra_settings),
+ MacOSDesktopApp("mail","Mail",Icons.Rounded.Mail,Color(0xFF75BCEB),R.drawable.aethra_mail),
+ MacOSDesktopApp("maps","Maps",Icons.Rounded.Map,Color(0xFF73C99C),R.drawable.aethra_maps),
+ MacOSDesktopApp("clock","Clock",Icons.Rounded.AccessTime,Color(0xFF9EAAEA),R.drawable.aethra_clock),
+ MacOSDesktopApp("contacts","Contacts",Icons.Rounded.Contacts,Color(0xFFFFA7B7),R.drawable.aethra_contacts),
+ MacOSDesktopApp("reminders","Reminders",Icons.Rounded.Checklist,Color(0xFFFFC56E),R.drawable.aethra_reminders),
+ MacOSDesktopApp("terminal","Terminal",Icons.Rounded.Code,Color(0xFF91D6B1),R.drawable.aethra_terminal),
+ MacOSDesktopApp("store","App Store",Icons.Rounded.Store,Color(0xFF75A9FF),R.drawable.aethra_store),
+ MacOSDesktopApp("android","Android Apps",Icons.Rounded.PhoneAndroid,Color(0xFF83D5A9),R.drawable.aethra_android),
+ MacOSDesktopApp("calculator","Calculator",Icons.Rounded.Calculate,Color(0xFFFFA94D),R.drawable.aethra_calculator),
+ MacOSDesktopApp("textedit","TextEdit",Icons.Rounded.EditNote,Color(0xFF82B8F4),R.drawable.aethra_textedit),
+ MacOSDesktopApp("preview","Preview",Icons.Rounded.PictureAsPdf,Color(0xFFB5B7C8),R.drawable.aethra_preview),
+ MacOSDesktopApp("music","Music",Icons.Rounded.MusicNote,Color(0xFFE78BB8),R.drawable.aethra_music)
 )
 
 @Composable
@@ -481,7 +482,7 @@ private fun MacOSDock(open:(String)->Unit,launchpad:()->Unit,minimized:List<Stri
    horizontalArrangement=Arrangement.spacedBy(5.dp),verticalAlignment=Alignment.CenterVertically) {
    DockIcon("Launchpad",Icons.Rounded.Apps,Color(0xFFB7A5F7),launchpad)
    desktopApps.filter{it.id in listOf("finder","browser","notes","photos","calendar","settings")}.forEach { app ->
-    DockIcon(app.title,app.icon,app.tint){open(app.id)}
+    DockIcon(app.title,app.icon,app.tint,{open(app.id)},asset=app.asset)
    }
    minimized.distinct().forEach { id ->
     val app=desktopApps.firstOrNull{it.id==id}
@@ -492,7 +493,7 @@ private fun MacOSDock(open:(String)->Unit,launchpad:()->Unit,minimized:List<Stri
 }
 
 @Composable
-private fun DockIcon(label:String,icon:androidx.compose.ui.graphics.vector.ImageVector,tint:Color,onClick:()->Unit) {
+private fun DockIcon(label:String,icon:androidx.compose.ui.graphics.vector.ImageVector,tint:Color,onClick:()->Unit,asset:Int?=null) {
  val iconScale= remember { Animatable(1f) }
  val scope= rememberCoroutineScope()
  Column(Modifier.width(43.dp).clickable {
@@ -505,7 +506,7 @@ private fun DockIcon(label:String,icon:androidx.compose.ui.graphics.vector.Image
   }
  },horizontalAlignment=Alignment.CenterHorizontally) {
   Box(Modifier.size(39.dp).shadow(5.dp,RoundedCornerShape(11.dp)).graphicsLayer { scaleX=iconScale.value; scaleY=iconScale.value }.clip(RoundedCornerShape(11.dp)).background(Brush.linearGradient(listOf(tint.copy(alpha=.95f),tint.copy(alpha=.45f)))),contentAlignment=Alignment.Center) {
-   Icon(icon,null,tint=Color.White,modifier=Modifier.size(24.dp))
+   if(asset!=null) Image(painterResource(asset),null,Modifier.fillMaxSize()) else Icon(icon,null,tint=Color.White,modifier=Modifier.size(24.dp))
   }
   Spacer(Modifier.height(4.dp))
   Text(label,color=AWhite,fontSize=7.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
@@ -558,7 +559,7 @@ private fun MacOSLaunchpad(query:String,onQuery:(String)->Unit,apps:List<MacOSDe
    Spacer(Modifier.height(14.dp))
    val filtered=apps.filter{query.isBlank()||it.title.contains(query,true)}
    LazyVerticalGrid(columns=GridCells.Adaptive(105.dp),modifier=Modifier.weight(1f),horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(13.dp)) {
-    items(filtered,key={it.id}) { app -> AppGridItem(app.title,app.icon,app.tint){open(app.id)} }
+    items(filtered,key={it.id}) { app -> AppGridItem(app.title,app.icon,app.tint,app.asset){open(app.id)} }
     items(installed.filter{query.isNotBlank()&&it.title.contains(query,true)}.take(20),key={it.packageName}) { app ->
      Column(Modifier.clickable{launch(app)}.padding(6.dp),horizontalAlignment=Alignment.CenterHorizontally) {
       val bitmap=remember(app.packageName){app.icon.toBitmap(80,80).asImageBitmap()}
@@ -604,10 +605,10 @@ private fun SearchField(query:String,onQuery:(String)->Unit,hint:String) {
 }
 
 @Composable
-private fun AppGridItem(title:String,icon:androidx.compose.ui.graphics.vector.ImageVector,tint:Color,onClick:()->Unit) {
+private fun AppGridItem(title:String,icon:androidx.compose.ui.graphics.vector.ImageVector,tint:Color,asset:Int,onClick:()->Unit) {
  Column(Modifier.clip(RoundedCornerShape(13.dp)).clickable(onClick=onClick).padding(7.dp),horizontalAlignment=Alignment.CenterHorizontally) {
   Box(Modifier.size(48.dp).shadow(5.dp,RoundedCornerShape(13.dp)).background(Brush.linearGradient(listOf(tint,tint.copy(alpha=.55f))),RoundedCornerShape(13.dp)),contentAlignment=Alignment.Center) {
-   Icon(icon,null,tint=Color.White,modifier=Modifier.size(29.dp))
+   Image(painterResource(asset),null,Modifier.fillMaxSize())
   }
   Spacer(Modifier.height(5.dp));Text(title,color=AWhite,fontSize=9.sp,textAlign=TextAlign.Center,maxLines=2)
  }
