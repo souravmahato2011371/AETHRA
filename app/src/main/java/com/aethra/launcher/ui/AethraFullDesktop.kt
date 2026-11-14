@@ -19,7 +19,9 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -50,6 +52,8 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -71,6 +75,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
@@ -88,7 +93,7 @@ private enum class DesktopPhase { BOOT, LOCK, DESKTOP }
 private data class MacOSDesktopApp(val id:String,val title:String,val icon:androidx.compose.ui.graphics.vector.ImageVector,val tint:Color)
 private data class DeviceApp(val title:String,val packageName:String,val activity:String,val icon:Drawable)
 private data class AudioTrack(val id:Long,val title:String,val artist:String,val album:String,val uri:Uri)
-private data class DesktopWindow(val id:String,val title:String,val x:Float,val y:Float,val workspace:Int,val minimized:Boolean=false,val maximized:Boolean=false)
+private data class DesktopWindow(val id:String,val title:String,val x:Float,val y:Float,val workspace:Int,val minimized:Boolean=false,val maximized:Boolean=false,val opening:Boolean=false)
 
 private val desktopApps = listOf(
  MacOSDesktopApp("finder","Finder",Icons.Rounded.Folder,Color(0xFF68BDF4)),
@@ -166,8 +171,8 @@ fun MacOSDesktopSimulation27() {
  }
  fun openApp(id:String) {
   val old=windows.firstOrNull { it.id==id }
-  val next=if(old==null) windows+DesktopWindow(id,desktopApps.firstOrNull{it.id==id}?.title ?: id.replaceFirstChar{it.uppercase()},if(wide)180f else 18f,if(wide)90f else 70f,workspace)
-   else { workspace=old.workspace; windows.filterNot { it.id==id } + old.copy(minimized=false) }
+  val next=if(old==null) windows+DesktopWindow(id,desktopApps.firstOrNull{it.id==id}?.title ?: id.replaceFirstChar{it.uppercase()},if(wide)180f else 18f,if(wide)90f else 70f,workspace,opening=true)
+   else { workspace=old.workspace; windows.filterNot { it.id==id } + old.copy(minimized=false,opening=true) }
   windows=next
   frontWindow=id
   launchpad=false;spotlight=false;missionControl=false;controlCenter=false;notificationCenter=false
@@ -233,7 +238,8 @@ fun MacOSDesktopSimulation27() {
          onMove={dx,dy->windows=windows.map{if(it.id==win.id)it.copy(x=(it.x+dx).coerceIn(0f,(maxW.value-260f).coerceAtLeast(0f)),y=(it.y+dy).coerceIn(0f,(maxH.value-170f).coerceAtLeast(0f)))else it}},
          onMinimize={windows=windows.map{if(it.id==win.id)it.copy(minimized=true)else it}},
          onMaximize={windows=windows.map{if(it.id==win.id)it.copy(maximized=!it.maximized)else it}},
-         onClose={closeWindow(win.id)}
+         onClose={closeWindow(win.id)},
+         onOpenAnimationFinished={windows=windows.map{if(it.id==win.id && it.opening)it.copy(opening=false)else it}}
         ) {
          when(win.id) {
           "finder" -> FinderContent(context)
@@ -487,10 +493,18 @@ private fun MacOSDock(open:(String)->Unit,launchpad:()->Unit,minimized:List<Stri
 
 @Composable
 private fun DockIcon(label:String,icon:androidx.compose.ui.graphics.vector.ImageVector,tint:Color,onClick:()->Unit) {
- var pressed by remember{mutableStateOf(false)}
- val scale by animateFloatAsState(if(pressed)1.17f else 1f,label="dock-scale")
- Column(Modifier.width(43.dp).clickable { pressed=true;onClick() },horizontalAlignment=Alignment.CenterHorizontally) {
-  Box(Modifier.size(39.dp).shadow(5.dp,RoundedCornerShape(11.dp)).scale(scale).clip(RoundedCornerShape(11.dp)).background(Brush.linearGradient(listOf(tint.copy(alpha=.95f),tint.copy(alpha=.45f)))),contentAlignment=Alignment.Center) {
+ val iconScale= remember { Animatable(1f) }
+ val scope= rememberCoroutineScope()
+ Column(Modifier.width(43.dp).clickable {
+  onClick()
+  scope.launch {
+   iconScale.animateTo(1.22f,spring(dampingRatio=0.48f,stiffness=520f))
+   iconScale.animateTo(0.93f,spring(dampingRatio=0.52f,stiffness=560f))
+   iconScale.animateTo(1.08f,spring(dampingRatio=0.58f,stiffness=620f))
+   iconScale.animateTo(1f,spring(dampingRatio=0.62f,stiffness=680f))
+  }
+ },horizontalAlignment=Alignment.CenterHorizontally) {
+  Box(Modifier.size(39.dp).shadow(5.dp,RoundedCornerShape(11.dp)).graphicsLayer { scaleX=iconScale.value; scaleY=iconScale.value }.clip(RoundedCornerShape(11.dp)).background(Brush.linearGradient(listOf(tint.copy(alpha=.95f),tint.copy(alpha=.45f)))),contentAlignment=Alignment.Center) {
    Icon(icon,null,tint=Color.White,modifier=Modifier.size(24.dp))
   }
   Spacer(Modifier.height(4.dp))
@@ -501,11 +515,15 @@ private fun DockIcon(label:String,icon:androidx.compose.ui.graphics.vector.Image
 
 @Composable
 private fun MacOSWindow(win:DesktopWindow,front:Boolean,screenW:androidx.compose.ui.unit.Dp,screenH:androidx.compose.ui.unit.Dp,wide:Boolean,
- onFocus:()->Unit,onMove:(Float,Float)->Unit,onMinimize:()->Unit,onMaximize:()->Unit,onClose:()->Unit,content:@Composable ColumnScope.()->Unit) {
+ onFocus:()->Unit,onMove:(Float,Float)->Unit,onMinimize:()->Unit,onMaximize:()->Unit,onClose:()->Unit,onOpenAnimationFinished:()->Unit,content:@Composable ColumnScope.()->Unit) {
+ val windowScale by animateFloatAsState(if(win.opening)0.88f else 1f,animationSpec=spring(dampingRatio=0.78f,stiffness=420f),label="window-open-scale")
+ val windowAlpha by animateFloatAsState(if(win.opening)0.72f else 1f,animationSpec=tween(190),label="window-open-alpha")
+ LaunchedEffect(win.id,win.opening) { if(win.opening) { delay(16); onOpenAnimationFinished() } }
  val width=if(win.maximized)screenW else if(wide)minOf(760.dp,screenW-70.dp) else screenW-20.dp
  val height=if(win.maximized)screenH else if(wide)minOf(520.dp,screenH-95.dp) else screenH-90.dp
  Column(Modifier.offset { IntOffset(if(win.maximized)0 else (win.x.dp.roundToPx()),if(win.maximized)0 else (win.y.dp.roundToPx())) }
   .width(width.coerceAtLeast(250.dp)).height(height.coerceAtLeast(190.dp))
+  .graphicsLayer { scaleX=windowScale; scaleY=windowScale; alpha=windowAlpha; transformOrigin=TransformOrigin(0.5f,0.5f) }
   .shadow(if(front)25.dp else 9.dp,RoundedCornerShape(15.dp))
   .clip(RoundedCornerShape(15.dp)).background(Color(0xF01A2638))
   .border(1.dp,if(front)Color(0x70FFFFFF)else Color(0x30FFFFFF),RoundedCornerShape(15.dp))
