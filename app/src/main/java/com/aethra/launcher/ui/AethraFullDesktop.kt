@@ -2,6 +2,8 @@
 
 package com.aethra.launcher.ui
 
+import com.aethra.launcher.R
+
 import android.content.Context
 import android.content.Intent
 import android.media.MediaPlayer
