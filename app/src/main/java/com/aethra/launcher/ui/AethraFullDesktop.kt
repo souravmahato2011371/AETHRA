@@ -488,7 +488,7 @@ private fun MacOSDock(open:(String)->Unit,launchpad:()->Unit,minimized:List<Stri
    }
    minimized.distinct().forEach { id ->
     val app=desktopApps.firstOrNull{it.id==id}
-    if(app!=null) DockIcon(app.title,app.icon,app.tint){restore(id)}
+    if(app!=null) DockIcon(app.title,app.icon,app.tint,onClick={restore(id)})
    }
   }
  }
