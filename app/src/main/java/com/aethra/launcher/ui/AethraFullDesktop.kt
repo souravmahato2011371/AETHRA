@@ -94,8 +94,31 @@ private val AStroke = Color(0x40FFFFFF)
 
 private enum class DesktopPhase { BOOT, LOCK, DESKTOP }
 private data class MacOSDesktopApp(val id:String,val title:String,val icon:androidx.compose.ui.graphics.vector.ImageVector,val tint:Color,val asset:Int)
-private data class DeviceApp(val title:String,val packageName:String,val activity:String,val icon:Drawable)
+private data class DeviceApp(val title:String,val packageName:String,val activity:String,val icon:Drawable,val brandAsset:Int?=null)
 private data class AudioTrack(val id:Long,val title:String,val artist:String,val album:String,val uri:Uri)
+
+private fun simpleBrandAsset(packageName:String):Int? = when(packageName) {
+ "com.google.android.youtube" -> R.drawable.simple_youtube
+ "com.spotify.music" -> R.drawable.simple_spotify
+ "com.github.android" -> R.drawable.simple_github
+ "com.android.chrome","com.google.android.apps.chrome" -> R.drawable.simple_googlechrome
+ "com.discord" -> R.drawable.simple_discord
+ "com.whatsapp" -> R.drawable.simple_whatsapp
+ "com.instagram.android" -> R.drawable.simple_instagram
+ "com.google.android.gm" -> R.drawable.simple_gmail
+ "com.google.android.apps.maps" -> R.drawable.simple_googlemaps
+ "com.reddit.frontpage" -> R.drawable.simple_reddit
+ else -> null
+}
+
+@Composable
+private fun DeviceAppArtwork(app:DeviceApp,modifier:Modifier=Modifier) {
+ if(app.brandAsset!=null) Image(painterResource(app.brandAsset),app.title,modifier)
+ else {
+  val bitmap=remember(app.packageName){app.icon.toBitmap(80,80).asImageBitmap()}
+  Image(bitmap,app.title,modifier)
+ }
+}
 private data class DesktopWindow(val id:String,val title:String,val x:Float,val y:Float,val workspace:Int,val minimized:Boolean=false,val maximized:Boolean=false,val opening:Boolean=false)
 
 private val desktopApps = listOf(
@@ -168,7 +191,7 @@ fun MacOSDesktopSimulation27() {
     .mapNotNull { info ->
      val a=info.activityInfo ?: return@mapNotNull null
      if(a.packageName==context.packageName) return@mapNotNull null
-     DeviceApp(info.loadLabel(context.packageManager).toString(),a.packageName,a.name,info.loadIcon(context.packageManager))
+     DeviceApp(info.loadLabel(context.packageManager).toString(),a.packageName,a.name,info.loadIcon(context.packageManager),simpleBrandAsset(a.packageName))
     }.distinctBy { it.packageName }.sortedBy { it.title.lowercase(Locale.ROOT) }
   }
  }
@@ -564,8 +587,7 @@ private fun MacOSLaunchpad(query:String,onQuery:(String)->Unit,apps:List<MacOSDe
     items(filtered,key={it.id}) { app -> AppGridItem(app.title,app.icon,app.tint,app.asset){open(app.id)} }
     items(installed.filter{query.isNotBlank()&&it.title.contains(query,true)}.take(20),key={it.packageName}) { app ->
      Column(Modifier.clickable{launch(app)}.padding(6.dp),horizontalAlignment=Alignment.CenterHorizontally) {
-      val bitmap=remember(app.packageName){app.icon.toBitmap(80,80).asImageBitmap()}
-      Image(bitmap,null,Modifier.size(43.dp).clip(RoundedCornerShape(11.dp)))
+      DeviceAppArtwork(app,Modifier.size(43.dp).clip(RoundedCornerShape(11.dp)))
       Text(app.title,color=AWhite,fontSize=9.sp,maxLines=2,textAlign=TextAlign.Center)
      }
     }
@@ -593,7 +615,7 @@ private fun MacOSSpotlight(query:String,onQuery:(String)->Unit,apps:List<MacOSDe
     }
     installed.filter{it.title.contains(query,true)}.take(7).forEach { app ->
      Row(Modifier.fillMaxWidth().clickable{launch(app)}.padding(8.dp),verticalAlignment=Alignment.CenterVertically) {
-      Icon(Icons.Rounded.Android,null,tint=ABlue);Spacer(Modifier.width(10.dp));Text(app.title,color=AWhite,fontSize=12.sp)
+      DeviceAppArtwork(app,Modifier.size(21.dp));Spacer(Modifier.width(10.dp));Text(app.title,color=AWhite,fontSize=12.sp)
      }
     }
    }
@@ -1112,8 +1134,7 @@ private fun AndroidAppsContent(apps:List<DeviceApp>,launch:(DeviceApp)->Unit) {
   LazyVerticalGrid(columns=GridCells.Adaptive(90.dp),horizontalArrangement=Arrangement.spacedBy(5.dp),verticalArrangement=Arrangement.spacedBy(7.dp)) {
    items(apps.filter{it.title.contains(query,true)},key={it.packageName}) { app ->
     Column(Modifier.clickable{launch(app)}.padding(7.dp),horizontalAlignment=Alignment.CenterHorizontally) {
-     val bitmap=remember(app.packageName){app.icon.toBitmap(80,80).asImageBitmap()}
-     Image(bitmap,null,Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)))
+     DeviceAppArtwork(app,Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)))
      Text(app.title,color=AWhite,fontSize=9.sp,textAlign=TextAlign.Center,maxLines=2)
     }
    }
